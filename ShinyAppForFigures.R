@@ -83,8 +83,10 @@ together.across %>% distinct(., module)
 
 #thinking about:
 #put a slider for pvalue
+#put a table in the modules side that has enriched pathways
 #do network plots and then change highlighting?? with radio buttons??
 #pathway package in R kegg pathways uses flybase IDs I think
+
 
 #link to mysql
 #slider for ldx, fisher values type of snp "protein change" "upstream" etc
