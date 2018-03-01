@@ -38,15 +38,15 @@ library(reshape2)
 #WithinMonthsDE<-read.table("/media/raglandlab/ExtraDrive1/RpomDiapauseRNAseqTraj_GJR/RNAseqToMysql/PomModsDEwithinMonth.csv",header=T,row.names=1,sep=",",stringsAsFactors = F)
 #my connection through uni and the vpn is super slow so Im going to start with running on my machine so I can work out shiny 
 WithinMonthsDE<-read.table("/Users/edwinadowle/Documents/Cerasi/Pomonella/RSEMresults/AppleBackToHaw2MremoveBadHaw4M/shiny/PomModsDEwithinMonth.csv",header=T,row.names=1,sep=",",stringsAsFactors = F)
-WithinMonthsDE.haw<-data.frame(WithinMonthsDE[1:6])
-WithinMonthsDE.apple<-data.frame(WithinMonthsDE[c(1,2,7:11)])
+WithinMonthsDE.haw<-data.frame(WithinMonthsDE[c(1:6,12)])
+WithinMonthsDE.apple<-data.frame(WithinMonthsDE[c(1,2,7:12)])
 WithinMonthsDE.haw$month2vs2_haw_logFC.x<-0
-WithinMonthsDE.haw<-WithinMonthsDE.haw[,c(1,2,7,3,4,5,6)]
-WithinMonthsDE.apple<-WithinMonthsDE.apple[,c(1,2,3,4,5,6,7)]
-colnames(WithinMonthsDE.haw) <- c("gene_id","flybase", "2M","3M","4M","5M","6M")
-colnames(WithinMonthsDE.apple) <- c("gene_id", "flybase", "2M","3M","4M","5M","6M")
-WithinMonthsDE.haw.melt <- melt(WithinMonthsDE.haw,  c("gene_id","flybase"))
-WithinMonthsDE.apple.melt <- melt(WithinMonthsDE.apple, c("gene_id","flybase"))
+WithinMonthsDE.haw<-WithinMonthsDE.haw[,c(1,7,2,8,3,4,5,6)]
+WithinMonthsDE.apple<-WithinMonthsDE.apple[,c(1,8,2,3,4,5,6,7)]
+colnames(WithinMonthsDE.haw) <- c("gene_id","module","flybase", "2M","3M","4M","5M","6M")
+colnames(WithinMonthsDE.apple) <- c("gene_id","module","flybase", "2M","3M","4M","5M","6M")
+WithinMonthsDE.haw.melt <- melt(WithinMonthsDE.haw,  c("gene_id","flybase","module"))
+WithinMonthsDE.apple.melt <- melt(WithinMonthsDE.apple, c("gene_id","flybase","module"))
 WithinMonthsDE.haw.melt$pop<-"haw"
 WithinMonthsDE.apple.melt$pop<-"apple"
 #together<-rbind(WithinMonthsDE.haw.melt,WithinMonthsDE.apple.melt)
@@ -94,12 +94,15 @@ flybase_symbol_ID<-flybase_symbol_ID[c(1,3)]
 
 ui<-fluidPage(
   conditionalPanel(condition="input.conditionedPanels==1",
-                   radioButtons('across', label = 'pathway_across',
+                   radioButtons('choose_across_between', label="Dataset_choice",
+                                choices=c('Across','Between'),selected='Across'),
+                   radioButtons('across', label = 'pathway',
                                 choices = c("all","wnt","insulin","tor"),selected='all'),
                    uiOutput(outputId = "gene")),
   conditionalPanel(condition="input.conditionedPanels==2",
-                   radioButtons('across_modules', label = 'Modules',
-                                choices = c("1","2","3","4","5","6","7"),selected="1"),
+                   radioButtons('choose_across_between2', label="Dataset_choice",
+                                choices=c('Across','Between'),selected='Across'),
+                   uiOutput(outputId = "module_selection"),
                    uiOutput(outputId = "gene_module"))
   
 ,
@@ -131,7 +134,10 @@ server<-function(input,output) {
     
   #})
   output$gene <- renderUI({
-    df<-together.across
+    if (input$choose_across_between=='Across'){
+    df<-together.across}
+    if(input$choose_across_between=='Between'){
+      df<-together}
     #test<-'wnt'
     if (input$across=='wnt'){
       choicesare<-df %>% filter(., flybase %in% wnt$flyid) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))}
@@ -142,6 +148,7 @@ server<-function(input,output) {
     if(input$across=='all'){
     choicesare<-df %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))}
  
+    choicesare<-rbind(paste("AllGenes","NA","NA"),choicesare)
        selectizeInput(inputId = "plot_var",
                    label= "variable to plot",
  #                  choices=together.across %>% distinct(.,gene_id), 
@@ -150,14 +157,35 @@ server<-function(input,output) {
                    options=list(maxOptions=3000))
     
   })
+  
+output$module_selection <-renderUI({
+  if (input$choose_across_between2=='Between'){
+    optionsare = c("1","2","3","4","5","6","7","8")
+    }
+  if(input$choose_across_between2=='Across'){
+    optionsare = c("1","2","3","4","5","6","7")
+    }
+  radioButtons('across_modules', label = 'Modules',
+               choices = optionsare,selected="1")
+  
+  
+})
+
   output$gene_module <- renderUI({
-    df<-together.across
+    if(input$choose_across_between2=='Across'){
+      df2<-together.across
+      choicesgenes=df2 %>% filter(., module %in% input$across_modules) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))
+    }
+    if(input$choose_across_between2=='Between'){
+      df2<-together
+      choicesgenes=df2 %>% filter(., module %in% input$across_modules) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))
+    }
+    choicesgenes<-rbind(paste("AllGenes","NA","NA"),choicesgenes)
     
-    #test<-'wnt'
     selectizeInput(inputId = "plot_var2",
                    label= "variable to plot",
                    #                  choices=together.across %>% distinct(.,gene_id), 
-                   choices=together.across %>% filter(., module %in% input$across_modules) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase)),
+                   choices=choicesgenes,
                    options=list(maxOptions=3000))
   })
 
@@ -165,7 +193,20 @@ server<-function(input,output) {
 
   output$main_plot <-renderPlot({
     #specify the plot that will be generated
-    together.across.test<-together.across %>% filter(.,gene_id==strsplit(input$plot_var," +")[[1]][1])
+    if (input$choose_across_between=='Across'){
+      df3<-together.across}
+    if (input$choose_across_between=='Between')
+      {df3<-together}
+    if(strsplit(input$plot_var," +")[[1]][1]=="AllGenes" && input$across=='all') {
+      together.across.test<-df3 }
+    else if(strsplit(input$plot_var," +")[[1]][1]=="AllGenes" && input$across=="insulin") {
+      together.across.test<-df3  %>% filter(.,flybase %in% insulin$flyid) }
+    else if(strsplit(input$plot_var," +")[[1]][1]=="AllGenes" && input$across=='wnt' ) {
+      together.across.test<-df3 %>% filter(.,flybase %in% wnt$flyid) }
+    else if(strsplit(input$plot_var," +")[[1]][1]=="AllGenes" && input$across=="tor" ) {
+      together.across.test<-df3 %>% filter(.,flybase %in% tor$flyid) }
+     else
+      (together.across.test<-df3 %>% filter(.,gene_id==strsplit(input$plot_var," +")[[1]][1]))
     title<-together.across.test[1,2]
     ggplot(together.across.test, aes(variable, value,group = interaction(gene_id,pop) ,colour=pop)) +
       geom_line() +
@@ -177,7 +218,18 @@ server<-function(input,output) {
   
   output$second_plot <-renderPlot({
     #specify the plot that will be generated
-    together.across.test<-together.across %>% filter(.,gene_id==strsplit(input$plot_var2," +")[[1]][1])
+    if (input$choose_across_between2=='Across'){
+      df4<-together.across}
+    if(input$choose_across_between2=='Between'){
+      df4<-together}
+    if(strsplit(input$plot_var2," +")[[1]][1]=="AllGenes")
+    {
+      together.across.test<-df4 %>% filter(.,module %in% input$across_modules)
+    }
+  
+     else
+       (together.across.test<-df4 %>% filter(.,gene_id==strsplit(input$plot_var2," +")[[1]][1]))
+    
     title<-together.across.test[1,2]
     ggplot(together.across.test, aes(variable, value,group = interaction(gene_id,pop) ,colour=pop)) +
       geom_line() +
@@ -203,5 +255,10 @@ ggplot(test, aes(variable, value,group = interaction(gene_id,pop) ,colour=pop)) 
   coord_cartesian(ylim = c(-4, 4)) +
   theme_bw()
 
+test<-together.across %>% filter(., module %in% '1') %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))
 
 
+head(rbind(paste("AllGenes","NA","NA"),test))
+together %>% filter(.,flybase %in% insulin$flyid)
+unique(together$module)
+unique(together.across$module)
