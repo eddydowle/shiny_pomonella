@@ -1,7 +1,8 @@
 #trying to build poolseq mysql stuff into a shiny app for figures to make it more interactive and such
 #firstly I've just started with just the RNAseq to try and make it simplier so I can get the syntax for shiny down first
 
-
+#This is the App that Im going to use for the mysql poolseq data
+#currently Im not there yet. Next on the list
 #
 library(gplots)
 library(ggplot2)
@@ -14,28 +15,10 @@ library(pool)
 library(dplyr)
 library(RMySQL)
 library(reshape2)
-#going to try and switch to pool and dbplyr for connecting to the mysql server as apparently more efficient for shiny?
-#Im going to switch to dbplyr but not really because I can already do this in mysql language and I cant be arsed reworking in dbplyr
-#so this:
-#con <- dbConnect(MySQL(),user="raglandlab", password="pomonella",dbname="PomUrbanaPoolseqSNP", host="localhost")
-#query <- dbGetQuery(con,"SELECT feature_alias.gene_id, annotation.loc, annotation.effect,snpFisher.appleave_hawave_fisher_pvalue FROM feature_alias, annotation, snpFisher WHERE gene_id='gene10083' AND feature_alias.loc = annotation.loc AND annotation.snpId = snpFisher.snpId AND snpFisher.appleave_hawave_fisher_pvalue < 0.05;")
-
-#becomes:
-#my_db <- dbPool(
-#  RMySQL::MySQL(), 
-#  dbname = "PomUrbanaPoolseqSNP",
-#  host = "localhost",
-#  username = "raglandlab",
-#  password = "pomonella"
-#)
-
-#x<-tbl(my_db, sql("SELECT feature_alias.gene_id, annotation.loc, annotation.effect,snpFisher.appleave_hawave_fisher_pvalue FROM feature_alias, annotation, snpFisher WHERE gene_id='gene10083' AND feature_alias.loc = annotation.loc AND annotation.snpId = snpFisher.snpId AND snpFisher.appleave_hawave_fisher_pvalue < 0.05")) %>% explain()
-#i think to do it properly  in dbplyr you would have to do joins
-#https://stackoverflow.com/questions/39864427/dplyr-sql-joins
-#Im too lazy to relearn how to call mysql from R so Im sticking with the mysql syntax but I think it would be better for new people to learn the dbplyr syntax so that its less learning and fits with tidyverse
 
 #to start with lets just work on the RNAtable
-#WithinMonthsDE<-read.table("/media/raglandlab/ExtraDrive1/RpomDiapauseRNAseqTraj_GJR/RNAseqToMysql/PomModsDEwithinMonth.csv",header=T,row.names=1,sep=",",stringsAsFactors = F)
+#apple<-read.table("/media/raglandlab/ExtraDrive1/RpomDiapauseRNAseqTraj_GJR/prelimResults/Table.apple.JuneEJD",header=T,row.names=1,sep="\t",stringsAsFactors = F)
+#haw<-read.table("/media/raglandlab/ExtraDrive1/RpomDiapauseRNAseqTraj_GJR/prelimResults/Table.haw.JuneEJD",header=T,row.names=1,sep="\t",stringsAsFactors = F)
 #my connection through uni and the vpn is super slow so Im going to start with running on my machine so I can work out shiny 
 apple<-read.table("/Users/edwinadowle/Documents/Cerasi/Pomonella/RSEMresults/AppleBackToHaw2MremoveBadHaw4M/Table.apple.JuneEJD",header=T,row.names=1,sep="\t",stringsAsFactors = F)
 colnames(apple)
@@ -83,12 +66,19 @@ tor<-read.table("/Users/edwinadowle/Documents/Cerasi/Pomonella/RSEMresults/Apple
 insulin<-read.table("/Users/edwinadowle/Documents/Cerasi/Pomonella/RSEMresults/AppleBackToHaw2MremoveBadHaw4M/shiny/insulinSignalingFlybase.txt",header=T,row.names=NULL,sep="\t",stringsAsFactors = F)
 
 
-flybase_symbol_ID<-read.csv("/Users/edwinadowle/Documents/Cerasi/Pomonella/RSEMresults/AppleBackToHaw2MremoveBadHaw4M/shiny/fbgn_annotation_ID_fb_2017_06.tsv",header=T,row.names=NULL,sep="\t",stringsAsFactors = F,strip.white=T)
-flybase_symbol_ID<-flybase_symbol_ID[c(1,3)]
+#wnt<-read.table("/media/raglandlab/ExtraDrive1/RpomDiapauseRNAseqTraj_GJR/RNAseqToMysql/wntSignalingFlybase.txt",header=T,row.names=NULL,sep="\t",stringsAsFactors = F)
+#tor<-read.table("/media/raglandlab/ExtraDrive1/RpomDiapauseRNAseqTraj_GJR/RNAseqToMysql/torSignalingFlybase.txt",header=T,row.names=NULL,sep="\t",stringsAsFactors = F)
+#insulin<-read.table("/media/raglandlab/ExtraDrive1/RpomDiapauseRNAseqTraj_GJR/RNAseqToMysql/insulinSignalingFlybase.txt",header=T,row.names=NULL,sep="\t",stringsAsFactors = F)
 
-
-#together.across %>% distinct(., module)
 #https://stackoverflow.com/questions/48565661/dynamically-adding-and-removing-objects-in-response-to-selectinput-in-shiny
+
+
+flybase_symbol_ID<-read.csv("/Users/edwinadowle/Documents/Cerasi/Pomonella/RSEMresults/AppleBackToHaw2MremoveBadHaw4M/shiny/fbgn_annotation_ID_fb_2017_06.tsv",header=T,row.names=NULL,sep="\t",stringsAsFactors = F,strip.white=T)
+#flybase_symbol_ID<-read.csv("/media/raglandlab/ExtraDrive1/RpomDiapauseRNAseqTraj_GJR/RNAseqToMysql/fbgn_annotation_ID_fb_2017_06.tsv",header=T,row.names=NULL,sep="\t",stringsAsFactors = F,strip.white=T)
+
+
+#link to mysql
+#slider for ldx, fisher values type of snp "protein change" "upstream" etc
 
 #thinking about:
 #do network plots and then change highlighting?? with radio buttons??
@@ -215,3 +205,24 @@ shinyApp(ui=ui,server=server)
 
 #click run app botton on rstudio
 
+
+
+#going to try and switch to pool and dbplyr for connecting to the mysql server as apparently more efficient for shiny?
+#Im going to switch to dbplyr but not really because I can already do this in mysql language and I cant be arsed reworking in dbplyr
+#so this:
+#con <- dbConnect(MySQL(),user="raglandlab", password="pomonella",dbname="PomUrbanaPoolseqSNP", host="localhost")
+#query <- dbGetQuery(con,"SELECT feature_alias.gene_id, annotation.loc, annotation.effect,snpFisher.appleave_hawave_fisher_pvalue FROM feature_alias, annotation, snpFisher WHERE gene_id='gene10083' AND feature_alias.loc = annotation.loc AND annotation.snpId = snpFisher.snpId AND snpFisher.appleave_hawave_fisher_pvalue < 0.05;")
+
+#becomes:
+#my_db <- dbPool(
+#  RMySQL::MySQL(), 
+#  dbname = "PomUrbanaPoolseqSNP",
+#  host = "localhost",
+#  username = "raglandlab",
+#  password = "pomonella"
+#)
+
+#x<-tbl(my_db, sql("SELECT feature_alias.gene_id, annotation.loc, annotation.effect,snpFisher.appleave_hawave_fisher_pvalue FROM feature_alias, annotation, snpFisher WHERE gene_id='gene10083' AND feature_alias.loc = annotation.loc AND annotation.snpId = snpFisher.snpId AND snpFisher.appleave_hawave_fisher_pvalue < 0.05")) %>% explain()
+#i think to do it properly  in dbplyr you would have to do joins
+#https://stackoverflow.com/questions/39864427/dplyr-sql-joins
+#Im too lazy to relearn how to call mysql from R so Im sticking with the mysql syntax but I think it would be better for new people to learn the dbplyr syntax so that its less learning and fits with tidyverse

@@ -4,6 +4,17 @@
 #source("https://bioconductor.org/biocLite.R")
 #biocLite("RDAVIDWebService")
 #
+
+#You will need to change the directories for the files that I am using
+#I have them set to my computer as for some reason at the uni I am at the VPN is horible just flick the comments over
+#other than that it should run
+
+#this one loads very slowly especially for the module side so just give it a minute to sort its stuff out.
+#currently I call david twice which is dumb and I will fix that at somepoint which should speed things up slightly
+
+
+####THESE MUST BE LOADED SLOWLY IN ORDER!!!####
+####Otherwise shit goes wrong for some reason####
 library(gplots)
 library(ggplot2)
 library(reshape)
@@ -16,27 +27,9 @@ library(dplyr)
 library(RMySQL)
 library(reshape2)
 library(RDAVIDWebService)
+#this uses my profile for DAVID feel free to build your own
 #install.packages('BACA')
 #library(BACA)
-#going to try and switch to pool and dbplyr for connecting to the mysql server as apparently more efficient for shiny?
-#Im going to switch to dbplyr but not really because I can already do this in mysql language and I cant be arsed reworking in dbplyr
-#so this:
-#con <- dbConnect(MySQL(),user="raglandlab", password="pomonella",dbname="PomUrbanaPoolseqSNP", host="localhost")
-#query <- dbGetQuery(con,"SELECT feature_alias.gene_id, annotation.loc, annotation.effect,snpFisher.appleave_hawave_fisher_pvalue FROM feature_alias, annotation, snpFisher WHERE gene_id='gene10083' AND feature_alias.loc = annotation.loc AND annotation.snpId = snpFisher.snpId AND snpFisher.appleave_hawave_fisher_pvalue < 0.05;")
-
-#becomes:
-#my_db <- dbPool(
-#  RMySQL::MySQL(), 
-#  dbname = "PomUrbanaPoolseqSNP",
-#  host = "localhost",
-#  username = "raglandlab",
-#  password = "pomonella"
-#)
-
-#x<-tbl(my_db, sql("SELECT feature_alias.gene_id, annotation.loc, annotation.effect,snpFisher.appleave_hawave_fisher_pvalue FROM feature_alias, annotation, snpFisher WHERE gene_id='gene10083' AND feature_alias.loc = annotation.loc AND annotation.snpId = snpFisher.snpId AND snpFisher.appleave_hawave_fisher_pvalue < 0.05")) %>% explain()
-#i think to do it properly  in dbplyr you would have to do joins
-#https://stackoverflow.com/questions/39864427/dplyr-sql-joins
-#Im too lazy to relearn how to call mysql from R so Im sticking with the mysql syntax but I think it would be better for new people to learn the dbplyr syntax so that its less learning and fits with tidyverse
 
 #to start with lets just work on the RNAtable
 #WithinMonthsDE<-read.table("/media/raglandlab/ExtraDrive1/RpomDiapauseRNAseqTraj_GJR/RNAseqToMysql/PomModsDEwithinMonth.csv",header=T,row.names=1,sep=",",stringsAsFactors = F)
@@ -81,20 +74,19 @@ wnt<-read.table("/Users/edwinadowle/Documents/Cerasi/Pomonella/RSEMresults/Apple
 tor<-read.table("/Users/edwinadowle/Documents/Cerasi/Pomonella/RSEMresults/AppleBackToHaw2MremoveBadHaw4M/shiny/torSignalingFlybase.txt",header=T,row.names=NULL,sep="\t",stringsAsFactors = F)
 insulin<-read.table("/Users/edwinadowle/Documents/Cerasi/Pomonella/RSEMresults/AppleBackToHaw2MremoveBadHaw4M/shiny/insulinSignalingFlybase.txt",header=T,row.names=NULL,sep="\t",stringsAsFactors = F)
 
+#wnt<-read.table("/media/raglandlab/ExtraDrive1/RpomDiapauseRNAseqTraj_GJR/RNAseqToMysql/wntSignalingFlybase.txt",header=T,row.names=NULL,sep="\t",stringsAsFactors = F)
+#tor<-read.table("/media/raglandlab/ExtraDrive1/RpomDiapauseRNAseqTraj_GJR/RNAseqToMysql/torSignalingFlybase.txt",header=T,row.names=NULL,sep="\t",stringsAsFactors = F)
+#insulin<-read.table("/media/raglandlab/ExtraDrive1/RpomDiapauseRNAseqTraj_GJR/RNAseqToMysql/insulinSignalingFlybase.txt",header=T,row.names=NULL,sep="\t",stringsAsFactors = F)
 
-#together.across %>% distinct(., module)
 #https://stackoverflow.com/questions/48565661/dynamically-adding-and-removing-objects-in-response-to-selectinput-in-shiny
-
-#thinking about:
-#put a table in the modules side that has enriched pathways
 
 
 flybase_symbol_ID<-read.csv("/Users/edwinadowle/Documents/Cerasi/Pomonella/RSEMresults/AppleBackToHaw2MremoveBadHaw4M/shiny/fbgn_annotation_ID_fb_2017_06.tsv",header=T,row.names=NULL,sep="\t",stringsAsFactors = F,strip.white=T)
+#flybase_symbol_ID<-read.csv("/media/raglandlab/ExtraDrive1/RpomDiapauseRNAseqTraj_GJR/RNAseqToMysql/fbgn_annotation_ID_fb_2017_06.tsv",header=T,row.names=NULL,sep="\t",stringsAsFactors = F,strip.white=T)
+
 flybase_symbol_ID<-flybase_symbol_ID[c(1,3)]
 
 
-#link to mysql
-#slider for ldx, fisher values type of snp "protein change" "upstream" etc
 
 ui<-fluidPage(
   conditionalPanel(condition="input.conditionedPanels==1",
@@ -299,28 +291,23 @@ shinyApp(ui=ui,server=server)
 
 #click run app botton on rstudio
 
-#sending out flybase IDS to DAVID and returning a table
-?DAVIDWebService
-test<-DAVIDWebService$new(email='eddy.dowle@otago.ac.nz',url="https://david.ncifcrf.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap12Endpoint/")
-test
-?addList
-FG <- addList(test, wnt$flyid, idType="FLYBASE_GENE_ID", listName="isClass", listType="Gene")
-FG
-test
-FuncAnnotChart <- getFunctionalAnnotationChart(test)
-FuncAnnotChart
-getFunctionalAnnotationChartFile(test, "/Users/edwinadowle/Documents/Cerasi/Pomonella/RSEMresults/AppleBackToHaw2MremoveBadHaw4M/shiny/FuncAnnotChart.tsv")
-FuncAnnotClust <- getClusterReport(test)
-getClusterReportFile(test, "/Users/edwinadowle/Documents/Cerasi/Pomonella/RSEMresults/AppleBackToHaw2MremoveBadHaw4M/shiny/FuncAnnotClust.tsv")
-FuncAnnotClust
-summary(FuncAnnotClust)
-nrow(summary(FuncAnnotClust))
-plot2D(FuncAnnotClust, 1)
-plot2D(FuncAnnotClust, 2)
-plot2D(FuncAnnotClust, 3)
-?DAVIDGODag
-davidGODag<-DAVIDGODag(members(FuncAnnotClust)[[3]], pvalueCutoff=0.1,"BP")
-plotGOTermGraph(g=goDag(davidGODag), r=davidGODag, max.nchar=40, node.shape="ellipse")
+#going to try and switch to pool and dbplyr for connecting to the mysql server as apparently more efficient for shiny?
+#Im going to switch to dbplyr but not really because I can already do this in mysql language and I cant be arsed reworking in dbplyr
+#so this:
+#con <- dbConnect(MySQL(),user="raglandlab", password="pomonella",dbname="PomUrbanaPoolseqSNP", host="localhost")
+#query <- dbGetQuery(con,"SELECT feature_alias.gene_id, annotation.loc, annotation.effect,snpFisher.appleave_hawave_fisher_pvalue FROM feature_alias, annotation, snpFisher WHERE gene_id='gene10083' AND feature_alias.loc = annotation.loc AND annotation.snpId = snpFisher.snpId AND snpFisher.appleave_hawave_fisher_pvalue < 0.05;")
 
-members(FuncAnnotClust)[[3]]
+#becomes:
+#my_db <- dbPool(
+#  RMySQL::MySQL(), 
+#  dbname = "PomUrbanaPoolseqSNP",
+#  host = "localhost",
+#  username = "raglandlab",
+#  password = "pomonella"
+#)
+
+#x<-tbl(my_db, sql("SELECT feature_alias.gene_id, annotation.loc, annotation.effect,snpFisher.appleave_hawave_fisher_pvalue FROM feature_alias, annotation, snpFisher WHERE gene_id='gene10083' AND feature_alias.loc = annotation.loc AND annotation.snpId = snpFisher.snpId AND snpFisher.appleave_hawave_fisher_pvalue < 0.05")) %>% explain()
+#i think to do it properly  in dbplyr you would have to do joins
+#https://stackoverflow.com/questions/39864427/dplyr-sql-joins
+#Im too lazy to relearn how to call mysql from R so Im sticking with the mysql syntax but I think it would be better for new people to learn the dbplyr syntax so that its less learning and fits with tidyverse
 
