@@ -1,7 +1,8 @@
 #trying to build poolseq mysql stuff into a shiny app for figures to make it more interactive and such
 #firstly I've just started with just the RNAseq to try and make it simplier so I can get the syntax for shiny down first
 
-
+#source("https://bioconductor.org/biocLite.R")
+#biocLite("RDAVIDWebService")
 #
 library(gplots)
 library(ggplot2)
@@ -14,6 +15,9 @@ library(pool)
 library(dplyr)
 library(RMySQL)
 library(reshape2)
+library(RDAVIDWebService)
+#install.packages('BACA')
+#library(BACA)
 #going to try and switch to pool and dbplyr for connecting to the mysql server as apparently more efficient for shiny?
 #Im going to switch to dbplyr but not really because I can already do this in mysql language and I cant be arsed reworking in dbplyr
 #so this:
@@ -78,7 +82,7 @@ tor<-read.table("/Users/edwinadowle/Documents/Cerasi/Pomonella/RSEMresults/Apple
 insulin<-read.table("/Users/edwinadowle/Documents/Cerasi/Pomonella/RSEMresults/AppleBackToHaw2MremoveBadHaw4M/shiny/insulinSignalingFlybase.txt",header=T,row.names=NULL,sep="\t",stringsAsFactors = F)
 
 
-together.across %>% distinct(., module)
+#together.across %>% distinct(., module)
 #https://stackoverflow.com/questions/48565661/dynamically-adding-and-removing-objects-in-response-to-selectinput-in-shiny
 
 #thinking about:
@@ -103,7 +107,8 @@ ui<-fluidPage(
                    radioButtons('choose_across_between2', label="Dataset_choice",
                                 choices=c('Across','Between'),selected='Across'),
                    uiOutput(outputId = "module_selection"),
-                   uiOutput(outputId = "gene_module"))
+                   uiOutput(outputId = "gene_module"),
+                   uiOutput(outputId = "gene_module_enrichment"))
   
 ,
   mainPanel(
@@ -189,6 +194,29 @@ output$module_selection <-renderUI({
                    options=list(maxOptions=3000))
   })
 
+  output$gene_module_enrichment <- renderUI({
+    if(input$choose_across_between2=='Across'){
+      df6<-together.across
+      df6<-df6 %>% filter(., module %in% input$across_modules) %>% na.omit(object, cols=flybase)
+      test1<-DAVIDWebService$new(email='eddy.dowle@otago.ac.nz',url="https://david.ncifcrf.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap12Endpoint/")
+      FG <- addList(test1, df6$flybase, idType="FLYBASE_GENE_ID", listName="isClass", listType="Gene")
+      FuncAnnotClust <- getClusterReport(test1)
+      choicesenrich=1:nrow(summary(FuncAnnotClust))
+    }
+    if(input$choose_across_between2=='Between'){
+      df6<-together
+      df6<-together %>% filter(., module %in% input$across_modules) %>% na.omit(object, cols=flybase)
+      test2<-DAVIDWebService$new(email='eddy.dowle@otago.ac.nz',url="https://david.ncifcrf.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap12Endpoint/")
+      FG <- addList(test2, df6$flybase, idType="FLYBASE_GENE_ID", listName="isClass", listType="Gene")
+      FuncAnnotClust <- getClusterReport(test2)
+      choicesenrich=1:nrow(summary(FuncAnnotClust))
+    }
+    selectizeInput(inputId = "plot_var2",
+                   label= "variable to plot",
+                   #                  choices=together.across %>% distinct(.,gene_id), 
+                   choices=choicesenrich,
+                   options=list(maxOptions=3000))
+  })
   
 
   output$main_plot <-renderPlot({
@@ -247,18 +275,28 @@ shinyApp(ui=ui,server=server)
 
 #click run app botton on rstudio
 
-ggplot(test, aes(variable, value,group = interaction(gene_id,pop) ,colour=pop)) +
-  geom_line() +
-  ggtitle("Across Months") +
-  scale_x_discrete("Time series from 2M",labels=c('2M','3M','4M','5M', '6M')) + #discrete
-  scale_y_continuous("Log Fold Change") + #continuous
-  coord_cartesian(ylim = c(-4, 4)) +
-  theme_bw()
+#sending out flybase IDS to DAVID and returning a table
+?DAVIDWebService
+test<-DAVIDWebService$new(email='eddy.dowle@otago.ac.nz',url="https://david.ncifcrf.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap12Endpoint/")
+test
+?addList
+FG <- addList(test, wnt$flyid, idType="FLYBASE_GENE_ID", listName="isClass", listType="Gene")
+FG
+test
+FuncAnnotChart <- getFunctionalAnnotationChart(test)
+FuncAnnotChart
+getFunctionalAnnotationChartFile(test, "/Users/edwinadowle/Documents/Cerasi/Pomonella/RSEMresults/AppleBackToHaw2MremoveBadHaw4M/shiny/FuncAnnotChart.tsv")
+FuncAnnotClust <- getClusterReport(test)
+getClusterReportFile(test, "/Users/edwinadowle/Documents/Cerasi/Pomonella/RSEMresults/AppleBackToHaw2MremoveBadHaw4M/shiny/FuncAnnotClust.tsv")
+FuncAnnotClust
+summary(FuncAnnotClust)
+nrow(summary(FuncAnnotClust))
+plot2D(FuncAnnotClust, 1)
+plot2D(FuncAnnotClust, 2)
+plot2D(FuncAnnotClust, 3)
+?DAVIDGODag
+davidGODag<-DAVIDGODag(members(FuncAnnotClust)[[3]], pvalueCutoff=0.1,"BP")
+plotGOTermGraph(g=goDag(davidGODag), r=davidGODag, max.nchar=40, node.shape="ellipse")
 
-test<-together.across %>% filter(., module %in% '1') %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))
+members(FuncAnnotClust)[[3]]
 
-
-head(rbind(paste("AllGenes","NA","NA"),test))
-together %>% filter(.,flybase %in% insulin$flyid)
-unique(together$module)
-unique(together.across$module)
