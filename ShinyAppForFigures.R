@@ -124,6 +124,7 @@ ui<-fluidPage(
           tabPanel(
             h4("Modules"),
             plotOutput(outputId = "second_plot") ,
+            tableOutput("David_table"),
             #define the value of this tab (not necessary here-just example)
             value=2
           )
@@ -153,9 +154,9 @@ server<-function(input,output) {
     if(input$across=='all'){
     choicesare<-df %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))}
  
-    choicesare<-rbind(paste("AllGenes","NA","NA"),choicesare)
+    choicesare<-rbind(paste("All_Genes","Overlayed"),choicesare)
        selectizeInput(inputId = "plot_var",
-                   label= "variable to plot",
+                   label= "Gene to plot",
  #                  choices=together.across %>% distinct(.,gene_id), 
                     choices=choicesare,
                    selected='gene10053',
@@ -185,7 +186,7 @@ output$module_selection <-renderUI({
       df2<-together
       choicesgenes=df2 %>% filter(., module %in% input$across_modules) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))
     }
-    choicesgenes<-rbind(paste("AllGenes","NA","NA"),choicesgenes)
+    choicesgenes<-rbind(paste("All_Genes","Overlayed"),choicesgenes)
     
     selectizeInput(inputId = "plot_var2",
                    label= "variable to plot",
@@ -211,13 +212,32 @@ output$module_selection <-renderUI({
       FuncAnnotClust <- getClusterReport(test2)
       choicesenrich=1:nrow(summary(FuncAnnotClust))
     }
-    selectizeInput(inputId = "plot_var2",
-                   label= "variable to plot",
+    selectizeInput(inputId = "table_var2",
+                   label= "David Cluster",
                    #                  choices=together.across %>% distinct(.,gene_id), 
                    choices=choicesenrich,
                    options=list(maxOptions=3000))
   })
   
+  output$David_table<-renderTable({
+    if(input$choose_across_between2=='Across'){
+     df7<-together.across %>% filter(., module %in% input$across_modules) %>% na.omit(object, cols=flybase)
+      test3<-DAVIDWebService$new(email='eddy.dowle@otago.ac.nz',url="https://david.ncifcrf.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap12Endpoint/")
+      FG2 <- addList(test3, df7$flybase, idType="FLYBASE_GENE_ID", listName="isClass", listType="Gene")
+      FuncAnnotClust <- getClusterReport(test3)
+    }
+    if(input$choose_across_between2=='Between'){
+      df7<-together %>% filter(., module %in% input$across_modules) %>% na.omit(object, cols=flybase)
+      test4<-DAVIDWebService$new(email='eddy.dowle@otago.ac.nz',url="https://david.ncifcrf.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap12Endpoint/")
+      FG2 <- addList(test4, df7$flybase, idType="FLYBASE_GENE_ID", listName="isClass", listType="Gene")
+      FuncAnnotClust <- getClusterReport(test4)
+    }
+clus<-as.integer(input$table_var2)
+ final_table<-members(FuncAnnotClust)[[clus]] %>% select(-one_of("Genes"))
+# final_table
+  #  final_table<-head(together)
+    final_table
+     })
 
   output$main_plot <-renderPlot({
     #specify the plot that will be generated
@@ -225,17 +245,23 @@ output$module_selection <-renderUI({
       df3<-together.across}
     if (input$choose_across_between=='Between')
       {df3<-together}
-    if(strsplit(input$plot_var," +")[[1]][1]=="AllGenes" && input$across=='all') {
-      together.across.test<-df3 }
-    else if(strsplit(input$plot_var," +")[[1]][1]=="AllGenes" && input$across=="insulin") {
-      together.across.test<-df3  %>% filter(.,flybase %in% insulin$flyid) }
-    else if(strsplit(input$plot_var," +")[[1]][1]=="AllGenes" && input$across=='wnt' ) {
-      together.across.test<-df3 %>% filter(.,flybase %in% wnt$flyid) }
-    else if(strsplit(input$plot_var," +")[[1]][1]=="AllGenes" && input$across=="tor" ) {
-      together.across.test<-df3 %>% filter(.,flybase %in% tor$flyid) }
+    if(strsplit(input$plot_var," +")[[1]][1]=="All_Genes" && input$across=='all') {
+      together.across.test<-df3 
+      title<-"All_Genes"}
+    else if(strsplit(input$plot_var," +")[[1]][1]=="All_Genes" && input$across=="insulin") {
+      together.across.test<-df3  %>% filter(.,flybase %in% insulin$flyid) 
+      title<-"All_Genes"}
+    else if(strsplit(input$plot_var," +")[[1]][1]=="All_Genes" && input$across=='wnt' ) {
+      together.across.test<-df3 %>% filter(.,flybase %in% wnt$flyid) 
+      title<-"All_Genes"}
+    else if(strsplit(input$plot_var," +")[[1]][1]=="All_Genes" && input$across=="tor" ) {
+      together.across.test<-df3 %>% filter(.,flybase %in% tor$flyid) 
+      title<-"All_Genes" }
      else
-      (together.across.test<-df3 %>% filter(.,gene_id==strsplit(input$plot_var," +")[[1]][1]))
-    title<-together.across.test[1,2]
+     {together.across.test<-df3 %>% filter(.,gene_id==strsplit(input$plot_var," +")[[1]][1])
+     title<- together.across.test[1,2]
+     }
+#    title<-together.across.test[1,2]
     ggplot(together.across.test, aes(variable, value,group = interaction(gene_id,pop) ,colour=pop)) +
       geom_line() +
       ggtitle("Across Months",title) +
@@ -250,15 +276,13 @@ output$module_selection <-renderUI({
       df4<-together.across}
     if(input$choose_across_between2=='Between'){
       df4<-together}
-    if(strsplit(input$plot_var2," +")[[1]][1]=="AllGenes")
+    if(strsplit(input$plot_var2," +")[[1]][1]=="All_Genes")
     {
       together.across.test<-df4 %>% filter(.,module %in% input$across_modules)
-    }
-  
+      title<-"All_Genes"}
      else
-       (together.across.test<-df4 %>% filter(.,gene_id==strsplit(input$plot_var2," +")[[1]][1]))
-    
-    title<-together.across.test[1,2]
+     {together.across.test<-df4 %>% filter(.,gene_id==strsplit(input$plot_var2," +")[[1]][1])
+     title<-together.across.test[1,2]}
     ggplot(together.across.test, aes(variable, value,group = interaction(gene_id,pop) ,colour=pop)) +
       geom_line() +
       ggtitle("Across Months",title) +
