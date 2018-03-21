@@ -143,6 +143,8 @@ server<-function(input,output) {
     if(input$within=='all'){
       choicesare<-df %>% filter(.,FDR < input$integer) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase)) }
     
+    choicesare<-rbind(paste("All_Genes","Overlayed"),choicesare)
+    
     selectizeInput(inputId = "plot_var",
                    label= "variable to plot",
                    #                  choices=together.across %>% distinct(.,gene_id), 
@@ -165,6 +167,8 @@ server<-function(input,output) {
     if(input$across=='all'){
       choicesare2<-df2 %>% filter(.,FDR < input$integer) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase)) }
     
+    choicesare2<-rbind(paste("All_Genes","Overlayed"),choicesare2)
+    
     selectizeInput(inputId = "plot_var2",
                    label= "variable to plot",
                    #                  choices=together.across %>% distinct(.,gene_id), 
@@ -175,9 +179,22 @@ server<-function(input,output) {
   
   
   output$main_plot <-renderPlot({
+    if(strsplit(input$plot_var," +")[[1]][1]=="All_Genes" && input$within=='all') {
+      together.test<-together %>% filter(.,FDR < input$integer)
+      title<-"All_Genes"}
+    else if(strsplit(input$plot_var," +")[[1]][1]=="All_Genes" && input$within=="insulin") {
+      together.test<-together%>% filter(., flybase %in% insulin$flyid)%>% filter(.,FDR < input$integer2)
+      title<-"All_Genes"}
+    else if(strsplit(input$plot_var," +")[[1]][1]=="All_Genes" && input$within=="wnt") {
+      together.test<-together%>% filter(., flybase %in% wnt$flyid)%>% filter(.,FDR < input$integer2)
+      title<-"All_Genes"}
+    else if(strsplit(input$plot_var," +")[[1]][1]=="All_Genes" && input$within=="tor") {
+      together.test<-together%>% filter(., flybase %in% tor$flyid)%>% filter(.,FDR < input$integer2)
+      title<-"All_Genes"}
+    else {
+      together.test<-together %>% filter(.,gene_id==strsplit(input$plot_var," +")[[1]][1])
+    title<-paste(together.test[1,2],(flybase_symbol_ID %>% filter(.,flybase==together.test[1,2]))[1,1],": FDR",format(round(unique(together.test$FDR),3),nsmall=3),collapse=" ")}
     #specify the plot that will be generated
-    together.test<-together %>% filter(.,gene_id==strsplit(input$plot_var," +")[[1]][1])
-    title<-paste(together.test[1,2],(flybase_symbol_ID %>% filter(.,flybase==together.test[1,2]))[1,1],": FDR",format(round(unique(together.test$FDR),3),nsmall=3),collapse=" ")
     ggplot(together.test, aes(variable, value,group = interaction(gene_id,pop) ,colour=pop)) +
       geom_line() +
       ggtitle("Within Months",title) +
@@ -187,9 +204,25 @@ server<-function(input,output) {
   })
   
   output$second_plot <-renderPlot({
+    if(strsplit(input$plot_var2," +")[[1]][1]=="All_Genes" && input$across=='all') {
+      together.across.test<-together.across %>% filter(.,FDR < input$integer)
+      title<-"All_Genes"}
+    else if(strsplit(input$plot_var2," +")[[1]][1]=="All_Genes" && input$across=="insulin") {
+      together.across.test<-together.across%>% filter(., flybase %in% insulin$flyid)%>% filter(.,FDR < input$integer2)
+      title<-"All_Genes"}
+    else if(strsplit(input$plot_var2," +")[[1]][1]=="All_Genes" && input$across=="wnt") {
+      together.across.test<-together.across%>% filter(., flybase %in% wnt$flyid)%>% filter(.,FDR < input$integer2)
+      title<-"All_Genes"}
+    else if(strsplit(input$plot_var2," +")[[1]][1]=="All_Genes" && input$across=="tor") {
+      together.across.test<-together.across%>% filter(., flybase %in% tor$flyid)%>% filter(.,FDR < input$integer2)
+      title<-"All_Genes"}
+    else {
+      together.across.test<-together.across %>% filter(.,gene_id==strsplit(input$plot_var2," +")[[1]][1])
+      title<-paste(c(together.across.test[1,2],(flybase_symbol_ID %>% filter(.,flybase==together.across.test[1,2]))[1,1],": FDR apple and haw", format(round(unique(together.across.test$FDR),3),nsmall=3)),collapse=" ")}
+    
     #specify the plot that will be generated
-    together.across.test<-together.across %>% filter(.,gene_id==strsplit(input$plot_var2," +")[[1]][1])
-    title<-paste(c(together.across.test[1,2],(flybase_symbol_ID %>% filter(.,flybase==together.across.test[1,2]))[1,1],": FDR apple and haw", format(round(unique(together.across.test$FDR),3),nsmall=3)),collapse=" ")
+#    together.across.test<-together.across %>% filter(.,gene_id==strsplit(input$plot_var2," +")[[1]][1])
+#    title<-paste(c(together.across.test[1,2],(flybase_symbol_ID %>% filter(.,flybase==together.across.test[1,2]))[1,1],": FDR apple and haw", format(round(unique(together.across.test$FDR),3),nsmall=3)),collapse=" ")
     ggplot(together.across.test, aes(variable, value,group = interaction(gene_id,pop) ,colour=pop)) +
       geom_line() +
       ggtitle("Across Months",title) +
