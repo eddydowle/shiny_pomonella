@@ -269,6 +269,8 @@ server<-function(input,output) {
       theme_bw()
   })
 #ok so we want a table of the snps  
+  
+#not sure what to do with ldx not every snp has LDx value might have to do a seperate table for ldx
   output$SNP_table<-renderTable({
     if(strsplit(input$plot_var," +")[[1]][1]=="All_Genes") {
       final_table<-'Select single gene'
