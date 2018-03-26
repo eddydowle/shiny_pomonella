@@ -103,10 +103,18 @@ ui<-fluidPage(
                    radioButtons('within', label = 'pathway_within',
                                 choices = c("all","wnt","insulin","tor"),selected='all'),
                    uiOutput(outputId = "gene"),
-                   pickerInput(inputId = "annotation", 
-                               label = "Select/deselect annotations", 
-                               choices = snpeff_effects, options = list(`actions-box` = TRUE), 
-                               multiple = TRUE)
+                   sliderInput("integerFisher", "Fisher value SNP Apple Ave Haw Ave:",
+                               min = 0, max = 1,
+                               value = 0.05),
+                   sliderInput("integerLDX", "LDx value SNP Apple Ave Haw Ave:",
+                               min = 0, max = 1,
+                               value = 0.05)
+                   #,
+# I think this will be more important for just looking at poolseq for now its both RNAseq and pool and that seems to limit the SNPS enough
+#                   pickerInput(inputId = "annotation", 
+#                               label = "Select/deselect annotations", 
+#                               choices = snpeff_effects, options = list(`actions-box` = TRUE), 
+#                               multiple = TRUE)
                   ),
   conditionalPanel(condition="input.conditionedPanels==2",
                    sliderInput("integer2", "FDR:",
@@ -115,10 +123,17 @@ ui<-fluidPage(
                    radioButtons('across', label = 'pathway_across',
                                 choices = c("all","wnt","insulin","tor"),selected='all'),
                    uiOutput(outputId = "gene2"),
-                   pickerInput(inputId = "annotation2", 
-                               label = "Select/deselect annotations", 
-                               choices = snpeff_effects, options = list(`actions-box` = TRUE), 
-                               multiple = TRUE)
+                   sliderInput("integerFisher2", "Fisher value SNP Apple Ave Haw Ave:",
+                               min = 0, max = 1,
+                               value = 0.05),
+                   sliderInput("integerLDX2", "LDx value SNP Apple Ave Haw Ave:",
+                               min = 0, max = 1,
+                               value = 0.05)
+                   #,
+#                   pickerInput(inputId = "annotation2", 
+#                               label = "Select/deselect annotations", 
+#                               choices = snpeff_effects, options = list(`actions-box` = TRUE), 
+#                               multiple = TRUE)
   ),
   
   
@@ -181,14 +196,14 @@ server<-function(input,output) {
     #test<-'wnt'
     #I think this should bring up things that are significant in one and both??
     if (input$across=='wnt'){
-      choicesare2<-df2 %>% filter(., flybase %in% wnt$flyid)%>% filter(.,FDR < 0.05) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))
+      choicesare2<-df2 %>% filter(., flybase %in% wnt$flyid)%>% filter(.,FDR < input$integer2) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))
     }
     if(input$across=='tor'){
       choicesare2<-df2 %>% filter(., flybase %in% tor$flyid)%>% filter(.,FDR < input$integer2) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase)) }
     if(input$across=='insulin'){
       choicesare2<-df2 %>% filter(., flybase %in% insulin$flyid)%>% filter(.,FDR < input$integer2) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase)) }
     if(input$across=='all'){
-      choicesare2<-df2 %>% filter(.,FDR < input$integer) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase)) }
+      choicesare2<-df2 %>% filter(.,FDR < input$integer2) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase)) }
     
     choicesare2<-rbind(paste("All_Genes","Overlayed"),choicesare2)
     
@@ -262,7 +277,7 @@ server<-function(input,output) {
       final_table<-'This is single gene'
       transcript<-strsplit(input$plot_var," +")[[1]][1]
 #      final_table<-transcript
-      sql <- sprintf("SELECT annotation2.snpId, feature_alias.gene_id, feature_alias.Flybase_tophit,feature_alias.Flybase_FBgn,feature_alias.Flybase_gene_symbol,feature_alias.Flybase_annotation_ID,annotation2.loc,annotation2.feature,annotation2.rank,annotation2.impact,annotation2.effect,annotation2.protein_changes,snpFisher2.* FROM  annotation2, snpFisher2, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=snpFisher2.snpId AND  snpFisher2.appleave_hawave_fisher_pvalue < 0.05 AND snpFisher2.hawearly_hawlate_fisher_pvalue < 0.05;",transcript)
+      sql <- sprintf("SELECT annotation2.snpId,snpFisher2.scaffold, snpFisher2.position, feature_alias.gene_id, feature_alias.Flybase_FBgn,feature_alias.Flybase_gene_symbol,feature_alias.Flybase_annotation_ID,annotation2.loc,annotation2.feature,annotation2.impact,annotation2.effect,annotation2.protein_changes,snpFisher2.appleave_hawave_fisher_pvalue,snpFisher2.appleearly_applelate_fisher_pvalue,snpFisher2.hawearly_hawlate_fisher_pvalue FROM  annotation2, snpFisher2, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=snpFisher2.snpId AND  snpFisher2.appleave_hawave_fisher_pvalue < 0.05 AND snpFisher2.hawearly_hawlate_fisher_pvalue < '%f';",transcript,input$integerFisher)
       query <- dbGetQuery(con, sql)
       final_table<-query
       }
@@ -279,7 +294,7 @@ server<-function(input,output) {
 #    final_table<-'This is single gene'
     transcript<-strsplit(input$plot_var2," +")[[1]][1]
     #      final_table<-transcript
-    sql <- sprintf("SELECT annotation2.snpId, feature_alias.gene_id, feature_alias.Flybase_tophit,feature_alias.Flybase_FBgn,feature_alias.Flybase_gene_symbol,feature_alias.Flybase_annotation_ID,annotation2.loc,annotation2.feature,annotation2.rank,annotation2.impact,annotation2.effect,annotation2.protein_changes,snpFisher2.* FROM  annotation2, snpFisher2, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=snpFisher2.snpId AND  snpFisher2.appleave_hawave_fisher_pvalue < 0.05 AND snpFisher2.hawearly_hawlate_fisher_pvalue < 0.05;",transcript)
+    sql <- sprintf("SELECT annotation2.snpId, snpFisher2.scaffold, snpFisher2.position,feature_alias.gene_id, feature_alias.Flybase_FBgn,feature_alias.Flybase_gene_symbol,feature_alias.Flybase_annotation_ID,annotation2.loc,annotation2.feature,annotation2.impact,annotation2.effect,annotation2.protein_changes,snpFisher2.appleave_hawave_fisher_pvalue,snpFisher2.appleearly_applelate_fisher_pvalue,snpFisher2.hawearly_hawlate_fisher_pvalue FROM  annotation2, snpFisher2, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=snpFisher2.snpId AND  snpFisher2.appleave_hawave_fisher_pvalue < 0.05 AND snpFisher2.hawearly_hawlate_fisher_pvalue < '%f';",transcript,input$integerFisher2)
     query <- dbGetQuery(con, sql)
     final_table<-query
     }

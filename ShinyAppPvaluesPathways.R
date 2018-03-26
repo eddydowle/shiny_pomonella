@@ -158,14 +158,14 @@ server<-function(input,output) {
     #test<-'wnt'
     #I think this should bring up things that are significant in one and both??
     if (input$across=='wnt'){
-      choicesare2<-df2 %>% filter(., flybase %in% wnt$flyid)%>% filter(.,FDR < 0.05) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))
+      choicesare2<-df2 %>% filter(., flybase %in% wnt$flyid)%>% filter(.,FDR < input$integer2) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))
     }
     if(input$across=='tor'){
       choicesare2<-df2 %>% filter(., flybase %in% tor$flyid)%>% filter(.,FDR < input$integer2) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase)) }
     if(input$across=='insulin'){
       choicesare2<-df2 %>% filter(., flybase %in% insulin$flyid)%>% filter(.,FDR < input$integer2) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase)) }
     if(input$across=='all'){
-      choicesare2<-df2 %>% filter(.,FDR < input$integer) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase)) }
+      choicesare2<-df2 %>% filter(.,FDR < input$integer2) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase)) }
     
     choicesare2<-rbind(paste("All_Genes","Overlayed"),choicesare2)
     
