@@ -93,25 +93,33 @@ snpeff_effects
 #link to mysql
 #slider for ldx, fisher values type of snp "protein change" "upstream" etc
 #could do graph of gene projectory and then along side a table of SNPS?
-
+?column
 
 ui<-fluidPage(
   conditionalPanel(condition="input.conditionedPanels==1",
+                   fluidRow(column(3,
                    sliderInput("integer", "FDR:",
                                min = 0, max = 1,
-                               value = 0.05),
+                               value = 0.05)),
+#                   fluidRow(
+                  column(4, offset=1,
                    radioButtons('within', label = 'pathway_within',
                                 choices = c("all","wnt","insulin","tor"),selected='all'),
-                   uiOutput(outputId = "gene"),
+ #                  fluidRow(
+                   uiOutput(outputId = "gene")),
+  #                 fuildRow(
+                  column(4,
                    sliderInput("integerFisher", "Max Fisher value SNP Apple Ave Haw Ave:",
                                min = 0, max = 1,
                                value = 0.05),
+ #                  fuildRow(
                    sliderInput("integerLDX", "Min LDx value SNP Apple Early Late:",
                                min = 0, max = 1,
                                value = 0.05),
+#                   fuildRow(
                    sliderInput("integerLDXhaw", "Min LDx value SNP Haw Early Late:",
                                min = 0, max = 1,
-                               value = 0.05)
+                               value = 0.05)))
                                       #,
 # I think this will be more important for just looking at poolseq for now its both RNAseq and pool and that seems to limit the SNPS enough
 #                   pickerInput(inputId = "annotation", 
@@ -120,12 +128,15 @@ ui<-fluidPage(
 #                               multiple = TRUE)
                   ),
   conditionalPanel(condition="input.conditionedPanels==2",
+                   fluidRow(column(3,
                    sliderInput("integer2", "FDR:",
                                min = 0, max = 1,
-                               value = 0.05),
+                               value = 0.05)),
+                   column(4, offset=1,
                    radioButtons('across', label = 'pathway_across',
                                 choices = c("all","wnt","insulin","tor"),selected='all'),
-                   uiOutput(outputId = "gene2"),
+                   uiOutput(outputId = "gene2")),
+                   column(4,
                    sliderInput("integerFisher2", "Max Fisher value SNP Apple Ave Haw Ave:",
                                min = 0, max = 1,
                                value = 0.05),
@@ -134,7 +145,7 @@ ui<-fluidPage(
                                value = 0.05),
                    sliderInput("integerLDX2haw", "Min LDx value SNP Haw Early Late:",
                                min = 0, max = 1,
-                               value = 0.05)
+                               value = 0.05)))
                    
                    #,
 #                   pickerInput(inputId = "annotation2", 
@@ -152,7 +163,7 @@ ui<-fluidPage(
     tabsetPanel(
       tabPanel(
         h4("Pathways DE within months FDR"),
-        plotOutput(outputId = "main_plot",width = '800px', height = '300px') ,
+        plotOutput(outputId = "main_plot") ,#,width = '800px', height = '300px'
         tableOutput("SNP_table"),
         #define the value of this tab
         value=1 #value relates to 'id=' in tabsetpanel. Except to get a value and relates that to'id' in tabsetPanel
