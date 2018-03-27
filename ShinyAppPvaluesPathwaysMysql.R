@@ -297,9 +297,9 @@ server<-function(input,output) {
       final_table<-'This is single gene'
       transcript<-strsplit(input$plot_var," +")[[1]][1]
 #      final_table<-transcript
-      sql <- sprintf("SELECT annotation2.snpId,snpFisher2.scaffold, snpFisher2.position, feature_alias.gene_id, feature_alias.Flybase_FBgn,feature_alias.Flybase_gene_symbol,feature_alias.Flybase_annotation_ID,annotation2.loc,annotation2.feature,annotation2.impact,annotation2.effect,annotation2.protein_changes,snpFisher2.appleave_hawave_fisher_pvalue,snpFisher2.appleearly_applelate_fisher_pvalue,snpFisher2.hawearly_hawlate_fisher_pvalue FROM  annotation2, snpFisher2, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=snpFisher2.snpId AND  snpFisher2.appleave_hawave_fisher_pvalue < 0.05 AND snpFisher2.hawearly_hawlate_fisher_pvalue < '%f';",transcript,input$integerFisher)
+      sql <- sprintf("SELECT annotation2.snpId, snpFisher2.scaffold, snpFisher2.position,annotation2.effect,annotation2.protein_changes,snpFisher2.appleave_hawave_fisher_pvalue,snpFisher2.appleearly_applelate_fisher_pvalue,snpFisher2.hawearly_hawlate_fisher_pvalue FROM  annotation2, snpFisher2, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=snpFisher2.snpId AND  snpFisher2.appleave_hawave_fisher_pvalue < '%f';",transcript,input$integerFisher)
       query <- dbGetQuery(con, sql)
-      sql <- sprintf("SELECT annotation2.snpId, poolLDx.MLE_AppleEarlyAppleLate, poolLDx.MLE_HawEarlyHawLate FROM  annotation2, poolLDx, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=poolLDx.snpId AND  poolLDx.MLE_AppleEarlyAppleLate > '%f' AND poolLDx.MLE_HawEarlyHawLate > '%f';",transcript,input$integerLDX,input$integerLDXhaw)
+      sql <- sprintf("SELECT annotation2.snpId, poolLDx.MLE_AppleEarlyAppleLate, poolLDx.MLE_HawEarlyHawLate FROM  annotation2, poolLDx, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=poolLDx.snpId AND  (poolLDx.MLE_AppleEarlyAppleLate > '%f' OR poolLDx.MLE_HawEarlyHawLate > '%f');",transcript,input$integerLDX,input$integerLDXhaw)
       query2 <- dbGetQuery(con, sql)
       final_table<-left_join(query,query2,by='snpId')
       }
@@ -316,9 +316,9 @@ server<-function(input,output) {
 #    final_table<-'This is single gene'
     transcript<-strsplit(input$plot_var2," +")[[1]][1]
     #      final_table<-transcript
-    sql <- sprintf("SELECT annotation2.snpId, snpFisher2.scaffold, snpFisher2.position,feature_alias.gene_id, feature_alias.Flybase_FBgn,feature_alias.Flybase_gene_symbol,feature_alias.Flybase_annotation_ID,annotation2.loc,annotation2.feature,annotation2.impact,annotation2.effect,annotation2.protein_changes,snpFisher2.appleave_hawave_fisher_pvalue,snpFisher2.appleearly_applelate_fisher_pvalue,snpFisher2.hawearly_hawlate_fisher_pvalue FROM  annotation2, snpFisher2, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=snpFisher2.snpId AND  snpFisher2.appleave_hawave_fisher_pvalue < 0.05 AND snpFisher2.hawearly_hawlate_fisher_pvalue < '%f';",transcript,input$integerFisher2)
+    sql <- sprintf("SELECT annotation2.snpId, snpFisher2.scaffold, snpFisher2.position, annotation2.effect,annotation2.protein_changes,snpFisher2.appleave_hawave_fisher_pvalue,snpFisher2.appleearly_applelate_fisher_pvalue,snpFisher2.hawearly_hawlate_fisher_pvalue FROM  annotation2, snpFisher2, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=snpFisher2.snpId AND snpFisher2.appleave_hawave_fisher_pvalue <  '%f';",transcript,input$integerFisher2)
     query <- dbGetQuery(con, sql)
-    sql <- sprintf("SELECT annotation2.snpId, poolLDx.MLE_AppleEarlyAppleLate, poolLDx.MLE_HawEarlyHawLate FROM  annotation2, poolLDx, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=poolLDx.snpId AND  poolLDx.MLE_AppleEarlyAppleLate > '%f' AND poolLDx.MLE_HawEarlyHawLate > '%f';",transcript,input$integerLDX2,input$integerLDX2haw)
+    sql <- sprintf("SELECT annotation2.snpId, poolLDx.MLE_AppleEarlyAppleLate, poolLDx.MLE_HawEarlyHawLate FROM  annotation2, poolLDx, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=poolLDx.snpId AND  (poolLDx.MLE_AppleEarlyAppleLate > '%f' OR poolLDx.MLE_HawEarlyHawLate > '%f');",transcript,input$integerLDX2,input$integerLDX2haw)
     query2 <- dbGetQuery(con, sql)
     final_table<-left_join(query,query2,by='snpId')
     }
