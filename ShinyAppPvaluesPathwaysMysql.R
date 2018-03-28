@@ -237,54 +237,66 @@ server<-function(input,output) {
   output$main_plot <-renderPlot({
     if(strsplit(input$plot_var," +")[[1]][1]=="All_Genes" && input$within=='all') {
       together.test<-together %>% filter(.,FDR < input$integer)
-      title<-"All_Genes"}
+      title<-"All_Genes"
+      linesize<-1}
     else if(strsplit(input$plot_var," +")[[1]][1]=="All_Genes" && input$within=="insulin") {
       together.test<-together%>% filter(., flybase %in% insulin$flyid)%>% filter(.,FDR < input$integer2)
-      title<-"All_Genes"}
+      title<-"All_Genes" 
+      linesize<-1}
     else if(strsplit(input$plot_var," +")[[1]][1]=="All_Genes" && input$within=="wnt") {
       together.test<-together%>% filter(., flybase %in% wnt$flyid)%>% filter(.,FDR < input$integer2)
-      title<-"All_Genes"}
+      title<-"All_Genes"
+      linesize<-1}
     else if(strsplit(input$plot_var," +")[[1]][1]=="All_Genes" && input$within=="tor") {
       together.test<-together%>% filter(., flybase %in% tor$flyid)%>% filter(.,FDR < input$integer2)
-      title<-"All_Genes"}
+      title<-"All_Genes"
+      linesize<-1}
     else {
       together.test<-together %>% filter(.,gene_id==strsplit(input$plot_var," +")[[1]][1])
-      title<-paste(together.test[1,2],(flybase_symbol_ID %>% filter(.,flybase==together.test[1,2]))[1,1],": FDR",format(round(unique(together.test$FDR),3),nsmall=3),collapse=" ")}
+      title<-paste(together.test[1,2],(flybase_symbol_ID %>% filter(.,flybase==together.test[1,2]))[1,1],": FDR",format(round(unique(together.test$FDR),3),nsmall=3),collapse=" ")
+      linesize<-3}
     #specify the plot that will be generated
     ggplot(together.test, aes(variable, value,group = interaction(gene_id,pop) ,colour=pop)) +
-      geom_line() +
+      geom_line(size=linesize) +
       ggtitle("Within Months",title) +
       scale_x_discrete("Time series from 2M",labels=c('2M','3M','4M','5M', '6M')) + #discrete
       scale_y_continuous("Log Fold Change",limits = c(-3.5, 3.5)) + #continuous
-      theme_bw()
+      theme_bw(base_size=20) +
+      scale_colour_manual(values=c('red','blue'))
   })
   
   output$second_plot <-renderPlot({
     if(strsplit(input$plot_var2," +")[[1]][1]=="All_Genes" && input$across=='all') {
       together.across.test<-together.across %>% filter(.,FDR < input$integer)
-      title<-"All_Genes"}
+      title<-"All_Genes"
+      linesize<-1}
     else if(strsplit(input$plot_var2," +")[[1]][1]=="All_Genes" && input$across=="insulin") {
       together.across.test<-together.across%>% filter(., flybase %in% insulin$flyid)%>% filter(.,FDR < input$integer2)
-      title<-"All_Genes"}
+      title<-"All_Genes"
+      linesize<-1}
     else if(strsplit(input$plot_var2," +")[[1]][1]=="All_Genes" && input$across=="wnt") {
       together.across.test<-together.across%>% filter(., flybase %in% wnt$flyid)%>% filter(.,FDR < input$integer2)
-      title<-"All_Genes"}
+      title<-"All_Genes"
+      linesize<-1}
     else if(strsplit(input$plot_var2," +")[[1]][1]=="All_Genes" && input$across=="tor") {
       together.across.test<-together.across%>% filter(., flybase %in% tor$flyid)%>% filter(.,FDR < input$integer2)
-      title<-"All_Genes"}
+      title<-"All_Genes"
+      linesize<-1}
     else {
       together.across.test<-together.across %>% filter(.,gene_id==strsplit(input$plot_var2," +")[[1]][1])
-      title<-paste(c(together.across.test[1,2],(flybase_symbol_ID %>% filter(.,flybase==together.across.test[1,2]))[1,1],": FDR apple and haw", format(round(unique(together.across.test$FDR),3),nsmall=3)),collapse=" ")}
+      title<-paste(c(together.across.test[1,2],(flybase_symbol_ID %>% filter(.,flybase==together.across.test[1,2]))[1,1],": FDR apple and haw", format(round(unique(together.across.test$FDR),3),nsmall=3)),collapse=" ")
+      linesize<-3}
     
     #specify the plot that will be generated
     #    together.across.test<-together.across %>% filter(.,gene_id==strsplit(input$plot_var2," +")[[1]][1])
     #    title<-paste(c(together.across.test[1,2],(flybase_symbol_ID %>% filter(.,flybase==together.across.test[1,2]))[1,1],": FDR apple and haw", format(round(unique(together.across.test$FDR),3),nsmall=3)),collapse=" ")
     ggplot(together.across.test, aes(variable, value,group = interaction(gene_id,pop) ,colour=pop)) +
-      geom_line() +
+      geom_line(size=linesize) +
       ggtitle("Across Months",title) +
       scale_x_discrete("Time series from 2M",labels=c('2M','3M','4M','5M', '6M')) + #discrete
       scale_y_continuous("Log Fold Change",limits = c(-3.5, 3.5)) + #continuous
-      theme_bw()
+      theme_bw(base_size=20) +
+      scale_colour_manual(values=c('red','blue'))
   })
 #ok so we want a table of the snps  
   
