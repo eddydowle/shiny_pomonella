@@ -11,8 +11,14 @@
 
 #this one loads very slowly especially for the module side so just give it a minute to sort its stuff out.
 #currently I call david twice which is dumb and I will fix that at somepoint which should speed things up slightly
+a<-together.across
+      a<-a %>% filter(., module %in% 1) %>% na.omit(object, cols=flybase)
+      test1<-DAVIDWebService$new(email='eddy.dowle@otago.ac.nz',url="https://david.ncifcrf.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap12Endpoint/")
+      FG <- addList(test1, a$flybase, idType="FLYBASE_GENE_ID", listName="isClass", listType="Gene")
+      FuncAnnotClust1 <- getClusterReport(test1)
+      FuncAnnotClust<-FuncAnnotClust1
 
-
+      FuncAnnotClust
 ####THESE MUST BE LOADED SLOWLY IN ORDER!!!####
 ####Otherwise shit goes wrong for some reason####
 library(gplots)
@@ -129,8 +135,28 @@ ui<-fluidPage(
 #create the function to be excuted by shiny
 server<-function(input,output) {
  # output$menuitem<-renderMenu({
-    
-  #})
+  FuncAnnotClust <- reactive({
+    if(input$choose_across_between2=='Across'){
+      df6<-together.across
+      df6<-df6 %>% filter(., module %in% input$across_modules) %>% na.omit(object, cols=flybase)
+      test1<-DAVIDWebService$new(email='eddy.dowle@otago.ac.nz',url="https://david.ncifcrf.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap12Endpoint/")
+      FG <- addList(test1, df6$flybase, idType="FLYBASE_GENE_ID", listName="isClass", listType="Gene")
+      FuncAnnotClust1 <- getClusterReport(test1)
+      FuncAnnotClust1
+      return(FuncAnnotClust1)
+    }
+    if(input$choose_across_between2=='Between'){
+      df6<-together
+      df6<-together %>% filter(., module %in% input$across_modules) %>% na.omit(object, cols=flybase)
+      test2<-DAVIDWebService$new(email='eddy.dowle@otago.ac.nz',url="https://david.ncifcrf.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap12Endpoint/")
+      FG <- addList(test2, df6$flybase, idType="FLYBASE_GENE_ID", listName="isClass", listType="Gene")
+      FuncAnnotClust1 <- getClusterReport(test2)
+#     FuncAnnotClust1
+      return(FuncAnnotClust1)
+   }
+  #  FuncAnnotClust1
+ # })
+  })
   output$gene <- renderUI({
     if (input$choose_across_between=='Across'){
     df<-together.across}
@@ -138,13 +164,13 @@ server<-function(input,output) {
       df<-together}
     #test<-'wnt'
     if (input$across=='wnt'){
-      choicesare<-df %>% filter(., flybase %in% wnt$flyid) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))}
+      choicesare<-df %>% filter(., flybase %in% wnt$flyid) %>% distinct(.,gene_id,.keep_all = TRUE) %>% dplyr::select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% dplyr::select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))}
     if(input$across=='tor'){
-    choicesare<-df %>% filter(., flybase %in% tor$flyid) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))}
+    choicesare<-df %>% filter(., flybase %in% tor$flyid) %>% distinct(.,gene_id,.keep_all = TRUE) %>% dplyr::select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% dplyr::select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))}
     if(input$across=='insulin'){
-    choicesare<-df %>% filter(., flybase %in% insulin$flyid) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))}
+    choicesare<-df %>% filter(., flybase %in% insulin$flyid) %>% distinct(.,gene_id,.keep_all = TRUE) %>% dplyr::select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% dplyr::select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))}
     if(input$across=='all'){
-    choicesare<-df %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))}
+    choicesare<-df %>% distinct(.,gene_id,.keep_all = TRUE) %>% dplyr::select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% dplyr::select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))}
  
     choicesare<-rbind(paste("All_Genes","Overlayed"),choicesare)
        selectizeInput(inputId = "plot_var",
@@ -172,11 +198,11 @@ output$module_selection <-renderUI({
   output$gene_module <- renderUI({
     if(input$choose_across_between2=='Across'){
       df2<-together.across
-      choicesgenes=df2 %>% filter(., module %in% input$across_modules) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))
+      choicesgenes=df2 %>% filter(., module %in% input$across_modules) %>% distinct(.,gene_id,.keep_all = TRUE) %>% dplyr::select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% dplyr::select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))
     }
     if(input$choose_across_between2=='Between'){
       df2<-together
-      choicesgenes=df2 %>% filter(., module %in% input$across_modules) %>% distinct(.,gene_id,.keep_all = TRUE) %>% select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))
+      choicesgenes=df2 %>% filter(., module %in% input$across_modules) %>% distinct(.,gene_id,.keep_all = TRUE) %>% dplyr::select(.,gene_id,flybase) %>% left_join(.,flybase_symbol_ID,by="flybase") %>% dplyr::select(.,gene_id,gene_symbol,flybase) %>% transmute(.,choice=paste(gene_id,gene_symbol,flybase))
     }
     choicesgenes<-rbind(paste("All_Genes","Overlayed"),choicesgenes)
     
@@ -188,22 +214,24 @@ output$module_selection <-renderUI({
   })
 
   output$gene_module_enrichment <- renderUI({
-    if(input$choose_across_between2=='Across'){
-      df6<-together.across
-      df6<-df6 %>% filter(., module %in% input$across_modules) %>% na.omit(object, cols=flybase)
-      test1<-DAVIDWebService$new(email='eddy.dowle@otago.ac.nz',url="https://david.ncifcrf.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap12Endpoint/")
-      FG <- addList(test1, df6$flybase, idType="FLYBASE_GENE_ID", listName="isClass", listType="Gene")
-      FuncAnnotClust <- getClusterReport(test1)
-      choicesenrich=1:nrow(summary(FuncAnnotClust))
-    }
-    if(input$choose_across_between2=='Between'){
-      df6<-together
-      df6<-together %>% filter(., module %in% input$across_modules) %>% na.omit(object, cols=flybase)
-      test2<-DAVIDWebService$new(email='eddy.dowle@otago.ac.nz',url="https://david.ncifcrf.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap12Endpoint/")
-      FG <- addList(test2, df6$flybase, idType="FLYBASE_GENE_ID", listName="isClass", listType="Gene")
-      FuncAnnotClust <- getClusterReport(test2)
-      choicesenrich=1:nrow(summary(FuncAnnotClust))
-    }
+ #   if(input$choose_across_between2=='Across'){
+#      df6<-together.across
+#      df6<-df6 %>% filter(., module %in% input$across_modules) %>% na.omit(object, cols=flybase)
+#      test1<-DAVIDWebService$new(email='eddy.dowle@otago.ac.nz',url="https://david.ncifcrf.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap12Endpoint/")
+#      FG <- addList(test1, df6$flybase, idType="FLYBASE_GENE_ID", listName="isClass", listType="Gene")
+ #     FuncAnnotClust <- getClusterReport(test1)
+#      choicesenrich=1:nrow(summary(FuncAnnotClust))
+ #   }
+  #  if(input$choose_across_between2=='Between'){
+   #   df6<-together
+    #  df6<-together %>% filter(., module %in% input$across_modules) %>% na.omit(object, cols=flybase)
+     # test2<-DAVIDWebService$new(email='eddy.dowle@otago.ac.nz',url="https://david.ncifcrf.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap12Endpoint/")
+    #  FG <- addList(test2, df6$flybase, idType="FLYBASE_GENE_ID", listName="isClass", listType="Gene")
+    #  FuncAnnotClust <- getClusterReport(test2)
+    #  choicesenrich=1:nrow(summary(FuncAnnotClust))
+  #  }
+    FuncAnnotClust<-FuncAnnotClust()
+    choicesenrich=1:nrow(summary(FuncAnnotClust))
     selectizeInput(inputId = "table_var2",
                    label= "David Cluster",
                    #                  choices=together.across %>% distinct(.,gene_id), 
@@ -212,23 +240,24 @@ output$module_selection <-renderUI({
   })
   
   output$David_table<-renderTable({
-    if(input$choose_across_between2=='Across'){
-     df7<-together.across %>% filter(., module %in% input$across_modules) %>% na.omit(object, cols=flybase)
-      test3<-DAVIDWebService$new(email='eddy.dowle@otago.ac.nz',url="https://david.ncifcrf.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap12Endpoint/")
-      FG2 <- addList(test3, df7$flybase, idType="FLYBASE_GENE_ID", listName="isClass", listType="Gene")
-      FuncAnnotClust <- getClusterReport(test3)
-    }
-    if(input$choose_across_between2=='Between'){
-      df7<-together %>% filter(., module %in% input$across_modules) %>% na.omit(object, cols=flybase)
-      test4<-DAVIDWebService$new(email='eddy.dowle@otago.ac.nz',url="https://david.ncifcrf.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap12Endpoint/")
-      FG2 <- addList(test4, df7$flybase, idType="FLYBASE_GENE_ID", listName="isClass", listType="Gene")
-      FuncAnnotClust <- getClusterReport(test4)
-    }
+  #  if(input$choose_across_between2=='Across'){
+  #   df7<-together.across %>% filter(., module %in% input$across_modules) %>% na.omit(object, cols=flybase)
+  #    test3<-DAVIDWebService$new(email='eddy.dowle@otago.ac.nz',url="https://david.ncifcrf.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap12Endpoint/")
+  #    FG2 <- addList(test3, df7$flybase, idType="FLYBASE_GENE_ID", listName="isClass", listType="Gene")
+  #    FuncAnnotClust <- getClusterReport(test3)
+   # }
+  #  if(input$choose_across_between2=='Between'){
+  #    df7<-together %>% filter(., module %in% input$across_modules) %>% na.omit(object, cols=flybase)
+  #    test4<-DAVIDWebService$new(email='eddy.dowle@otago.ac.nz',url="https://david.ncifcrf.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap12Endpoint/")
+  #   FG2 <- addList(test4, df7$flybase, idType="FLYBASE_GENE_ID", listName="isClass", listType="Gene")
+  #    FuncAnnotClust <- getClusterReport(test4)
+  #  }
 clus<-as.integer(input$table_var2)
- final_table<-members(FuncAnnotClust)[[clus]] %>% select(-one_of("Genes"))
+FuncAnnotClust<-FuncAnnotClust()
+final_table<-members(FuncAnnotClust)[[clus]] %>% dplyr::select(-one_of("Genes"))
 # final_table
   #  final_table<-head(together)
-    final_table
+final_table
      })
 
   output$main_plot <-renderPlot({
@@ -310,4 +339,12 @@ shinyApp(ui=ui,server=server)
 #i think to do it properly  in dbplyr you would have to do joins
 #https://stackoverflow.com/questions/39864427/dplyr-sql-joins
 #Im too lazy to relearn how to call mysql from R so Im sticking with the mysql syntax but I think it would be better for new people to learn the dbplyr syntax so that its less learning and fits with tidyverse
+test<-'Across'
+FuncAnnotClust3 <- 
+    if(test=='Across'){
+      return(FuncAnnotClust1)
+    }
+    if(input$choose_across_between2=='Between'){
+      return(FuncAnnotClust1)
+    }
 
