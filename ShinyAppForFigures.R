@@ -10,15 +10,7 @@
 #other than that it should run
 
 #this one loads very slowly especially for the module side so just give it a minute to sort its stuff out.
-#currently I call david twice which is dumb and I will fix that at somepoint which should speed things up slightly
-a<-together.across
-      a<-a %>% filter(., module %in% 1) %>% na.omit(object, cols=flybase)
-      test1<-DAVIDWebService$new(email='eddy.dowle@otago.ac.nz',url="https://david.ncifcrf.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap12Endpoint/")
-      FG <- addList(test1, a$flybase, idType="FLYBASE_GENE_ID", listName="isClass", listType="Gene")
-      FuncAnnotClust1 <- getClusterReport(test1)
-      FuncAnnotClust<-FuncAnnotClust1
 
-      FuncAnnotClust
 ####THESE MUST BE LOADED SLOWLY IN ORDER!!!####
 ####Otherwise shit goes wrong for some reason####
 library(gplots)
@@ -268,27 +260,33 @@ final_table
       {df3<-together}
     if(strsplit(input$plot_var," +")[[1]][1]=="All_Genes" && input$across=='all') {
       together.across.test<-df3 
-      title<-"All_Genes"}
+      title<-"All_Genes"
+      linesize<-1}
     else if(strsplit(input$plot_var," +")[[1]][1]=="All_Genes" && input$across=="insulin") {
       together.across.test<-df3  %>% filter(.,flybase %in% insulin$flyid) 
-      title<-"All_Genes"}
+      title<-"All_Genes"
+      linesize<-1}
     else if(strsplit(input$plot_var," +")[[1]][1]=="All_Genes" && input$across=='wnt' ) {
       together.across.test<-df3 %>% filter(.,flybase %in% wnt$flyid) 
-      title<-"All_Genes"}
+      title<-"All_Genes"
+      linesize<-1}
     else if(strsplit(input$plot_var," +")[[1]][1]=="All_Genes" && input$across=="tor" ) {
       together.across.test<-df3 %>% filter(.,flybase %in% tor$flyid) 
-      title<-"All_Genes" }
+      title<-"All_Genes" 
+      linesize<-1}
      else
      {together.across.test<-df3 %>% filter(.,gene_id==strsplit(input$plot_var," +")[[1]][1])
      title<- together.across.test[1,2]
+     linesize<-3
      }
 #    title<-together.across.test[1,2]
     ggplot(together.across.test, aes(variable, value,group = interaction(gene_id,pop) ,colour=pop)) +
-      geom_line() +
+      geom_line(size=linesize) +
       ggtitle("Across Months",title) +
       scale_x_discrete("Time series from 2M",labels=c('2M','3M','4M','5M', '6M')) + #discrete
       scale_y_continuous("Log Fold Change",limits = c(-4, 4)) + #continuous
-      theme_bw()
+      theme_bw(base_size=20) +
+      scale_colour_manual(values=c('red','blue'))
   })
   
   output$second_plot <-renderPlot({
@@ -300,17 +298,20 @@ final_table
     if(strsplit(input$plot_var2," +")[[1]][1]=="All_Genes")
     {
       together.across.test<-df4 %>% filter(.,module %in% input$across_modules)
-      title<-"All_Genes"}
+      title<-"All_Genes"
+      linesize<-1}
      else
      {together.across.test<-df4 %>% filter(.,gene_id==strsplit(input$plot_var2," +")[[1]][1])
-     title<-together.across.test[1,2]}
+     title<-together.across.test[1,2]
+     linesize<-3}
     ggplot(together.across.test, aes(variable, value,group = interaction(gene_id,pop) ,colour=pop)) +
-      geom_line() +
+      geom_line(size=linesize) +
       ggtitle("Across Months",title) +
       scale_x_discrete("Time series from 2M",labels=c('2M','3M','4M','5M', '6M')) + #discrete
       scale_y_continuous("Log Fold Change") + #continuous
       coord_cartesian(ylim = c(-4, 4)) +
-      theme_bw()
+      theme_bw(base_size=20) +
+      scale_colour_manual(values=c('red','blue'))
   })
   
 }
