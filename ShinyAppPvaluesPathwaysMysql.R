@@ -93,7 +93,7 @@ snpeff_effects
 #link to mysql
 #slider for ldx, fisher values type of snp "protein change" "upstream" etc
 #could do graph of gene projectory and then along side a table of SNPS?
-?column
+#?column
 
 ui<-fluidPage(
   conditionalPanel(condition="input.conditionedPanels==1",
@@ -102,7 +102,7 @@ ui<-fluidPage(
                                min = 0, max = 1,
                                value = 0.05)),
 #                   fluidRow(
-                  column(4, offset=1,
+                    column(4, offset=1,
                    radioButtons('within', label = 'pathway_within',
                                 choices = c("all","wnt","insulin","tor"),selected='all'),
  #                  fluidRow(
@@ -119,14 +119,21 @@ ui<-fluidPage(
 #                   fuildRow(
                    sliderInput("integerLDXhaw", "Min LDx value SNP Haw Early Late:",
                                min = 0, max = 1,
-                               value = 0.05)))
+                               value = 0.05),
+                  pickerInput(inputId = "annotation", 
+                                     label = "Select/deselect annotations", 
+                                    choices = snpeff_effects, options = list(`max-options` = 10), #, options = list(`max-options` = 4)
+                                   multiple = TRUE)))),
+            #         )),),
                                       #,
 # I think this will be more important for just looking at poolseq for now its both RNAseq and pool and that seems to limit the SNPS enough
-#                   pickerInput(inputId = "annotation", 
-#                               label = "Select/deselect annotations", 
-#                               choices = snpeff_effects, options = list(`actions-box` = TRUE), 
-#                               multiple = TRUE)
-                  ),
+                  
+    #  column(4,
+     #  pickerInput(inputId = "annotation", 
+      #                         label = "Select/deselect annotations", 
+       #                        choices = snpeff_effects, options = list(`actions-box` = TRUE), 
+        #                       multiple = TRUE)
+         #         )),
   conditionalPanel(condition="input.conditionedPanels==2",
                    fluidRow(column(3,
                    sliderInput("integer2", "FDR:",
@@ -145,14 +152,11 @@ ui<-fluidPage(
                                value = 0.05),
                    sliderInput("integerLDX2haw", "Min LDx value SNP Haw Early Late:",
                                min = 0, max = 1,
-                               value = 0.05)))
-                   
-                   #,
-#                   pickerInput(inputId = "annotation2", 
-#                               label = "Select/deselect annotations", 
-#                               choices = snpeff_effects, options = list(`actions-box` = TRUE), 
-#                               multiple = TRUE)
-  ),
+                               value = 0.05),
+                   pickerInput(inputId = "annotation2", 
+                               label = "Select/deselect annotations", 
+                               choices = snpeff_effects, options = list(`max-options` = 10), 
+                               multiple = TRUE)))),
   
   
   
@@ -313,7 +317,7 @@ server<-function(input,output) {
       query <- dbGetQuery(con, sql)
       sql <- sprintf("SELECT annotation2.snpId, poolLDx.MLE_AppleEarlyAppleLate, poolLDx.MLE_HawEarlyHawLate FROM  annotation2, poolLDx, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=poolLDx.snpId AND  (poolLDx.MLE_AppleEarlyAppleLate > '%f' OR poolLDx.MLE_HawEarlyHawLate > '%f');",transcript,input$integerLDX,input$integerLDXhaw)
       query2 <- dbGetQuery(con, sql)
-      final_table<-left_join(query,query2,by='snpId')
+      final_table<-left_join(query,query2,by='snpId') %>% distinct(.)  %>% filter(effect %in% input$annotation) %>% distinct(., snpId,effect, .keep_all = TRUE) #must filter this way to make this work distinct for multiple missense variations. where there is isoforms the missesnse variation will be slighly different number and now come up under the first distinct
       }
     # final_table
     #  final_table<-head(together)
@@ -328,18 +332,18 @@ server<-function(input,output) {
 #    final_table<-'This is single gene'
     transcript<-strsplit(input$plot_var2," +")[[1]][1]
     #      final_table<-transcript
-    sql <- sprintf("SELECT annotation2.snpId, snpFisher2.scaffold, snpFisher2.position, annotation2.effect,annotation2.protein_changes,snpFisher2.appleave_hawave_fisher_pvalue,snpFisher2.appleearly_applelate_fisher_pvalue,snpFisher2.hawearly_hawlate_fisher_pvalue FROM  annotation2, snpFisher2, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=snpFisher2.snpId AND snpFisher2.appleave_hawave_fisher_pvalue <  '%f';",transcript,input$integerFisher2)
-    query <- dbGetQuery(con, sql)
-    sql <- sprintf("SELECT annotation2.snpId, poolLDx.MLE_AppleEarlyAppleLate, poolLDx.MLE_HawEarlyHawLate FROM  annotation2, poolLDx, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=poolLDx.snpId AND  (poolLDx.MLE_AppleEarlyAppleLate > '%f' OR poolLDx.MLE_HawEarlyHawLate > '%f');",transcript,input$integerLDX2,input$integerLDX2haw)
-    query2 <- dbGetQuery(con, sql)
-    final_table<-left_join(query,query2,by='snpId')
+    sqlb <- sprintf("SELECT annotation2.snpId, snpFisher2.scaffold, snpFisher2.position, annotation2.effect,annotation2.protein_changes,snpFisher2.appleave_hawave_fisher_pvalue,snpFisher2.appleearly_applelate_fisher_pvalue,snpFisher2.hawearly_hawlate_fisher_pvalue FROM  annotation2, snpFisher2, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=snpFisher2.snpId AND snpFisher2.appleave_hawave_fisher_pvalue <  '%f';",transcript,input$integerFisher2)
+    queryb <- dbGetQuery(con, sqlb)
+    sqlb <- sprintf("SELECT annotation2.snpId, poolLDx.MLE_AppleEarlyAppleLate, poolLDx.MLE_HawEarlyHawLate FROM  annotation2, poolLDx, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=poolLDx.snpId AND  (poolLDx.MLE_AppleEarlyAppleLate > '%f' OR poolLDx.MLE_HawEarlyHawLate > '%f');",transcript,input$integerLDX2,input$integerLDX2haw)
+    queryb2 <- dbGetQuery(con, sqlb)
+    final_table<-left_join(queryb,queryb2,by='snpId') %>% distinct(.)  %>% filter(effect %in% input$annotation2)  %>% distinct(., snpId,effect, .keep_all = TRUE )#must filter this way to make this work
     }
         # final_table
     #  final_table<-head(together)
     final_table
   })
   
-  
+
 }
 
 #run the application
