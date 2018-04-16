@@ -83,6 +83,9 @@ flybase_symbol_ID<-read.csv("/media/raglandlab/ExtraDrive1/RpomDiapauseRNAseqTra
 
 snpeff_effects<-c('3_prime_UTR_variant', '5_prime_UTR_premature_start_codon_gain_variant', '5_prime_UTR_variant', 'downstream_gene_variant', 'initiator_codon_variant', 'initiator_codon_variant&non_canonical_start_codon', 'initiator_codon_variant&splice_region_variant', 'intergenic_region', 'intragenic_variant', 'intron_variant', 'missense_variant', 'missense_variant&splice_region_variant', 'non_coding_transcript_exon_variant', 'non_coding_transcript_variant', 'splice_acceptor_variant&intron_variant', 'splice_acceptor_variant&splice_donor_variant&intron_variant', 'splice_donor_variant&intron_variant', 'splice_region_variant', 'splice_region_variant&initiator_codon_variant&non_canonical_start_codon', 'splice_region_variant&intron_variant', 'splice_region_variant&non_coding_transcript_exon_variant', 'splice_region_variant&stop_retained_variant', 'splice_region_variant&synonymous_variant', 'start_lost', 'start_lost&splice_region_variant', 'stop_gained', 'stop_gained&splice_region_variant', 'stop_lost', 'stop_lost&splice_region_variant', 'stop_retained_variant', 'synonymous_variant', 'upstream_gene_variant')
 snpeff_effects
+table_options<-c('scaffold','position','ref','alt','appleave_MAF','appleearly_MAF','applelate_MAF','hawave_MAF','hawearly_MAF','hawlate_MAF','protein_changes','impact'
+                 ,'appleave_hawave_fisher_score','appleearly_applelate_fisher_score','appleearly_applelate_fisher_pvalue','hawearly_hawlate_fisher_score',
+                 'hawearly_hawlate_fisher_pvalue',"LDxApple","LDxHaw")
 #link to mysql
 #slider for ldx, fisher values type of snp "protein change" "upstream" etc
 
@@ -113,14 +116,18 @@ ui<-fluidPage(
                                min = 0, max = 1,
                                value = 0.05),
  #                  fuildRow(
-                   sliderInput("integerLDX", "Min LDx value SNP Apple Early Late:",
-                               min = 0, max = 1,
-                               value = 0.05),
+ #                  sliderInput("integerLDX", "Min LDx value SNP Apple Early Late:",
+#                               min = 0, max = 1,
+#                               value = 0.05),
 #                   fuildRow(
-                   sliderInput("integerLDXhaw", "Min LDx value SNP Haw Early Late:",
-                               min = 0, max = 1,
-                               value = 0.05),
-                  pickerInput(inputId = "annotation", 
+#                   sliderInput("integerLDXhaw", "Min LDx value SNP Haw Early Late:",
+#                               min = 0, max = 1,
+#                               value = 0.05),
+              pickerInput(inputId = "tableoptions", 
+                      label = "Select/deselect table output", 
+                      choices = table_options, options = list(`max-options` = 10), 
+                      multiple = TRUE),
+               pickerInput(inputId = "annotation", 
                                      label = "Select/deselect annotations", 
                                     choices = snpeff_effects, options = list(`max-options` = 10), #, options = list(`max-options` = 4)
                                    multiple = TRUE)))),
@@ -147,13 +154,17 @@ ui<-fluidPage(
                    sliderInput("integerFisher2", "Max Fisher value SNP Apple Ave Haw Ave:",
                                min = 0, max = 1,
                                value = 0.05),
-                   sliderInput("integerLDX2", "Min LDx value SNP Apple Early Late:",
-                               min = 0, max = 1,
-                               value = 0.05),
-                   sliderInput("integerLDX2haw", "Min LDx value SNP Haw Early Late:",
-                               min = 0, max = 1,
-                               value = 0.05),
-                   pickerInput(inputId = "annotation2", 
+               #    sliderInput("integerLDX2", "Min LDx value SNP Apple Early Late:",
+                #               min = 0, max = 1,
+                #               value = 0.05),
+                #   sliderInput("integerLDX2haw", "Min LDx value SNP Haw Early Late:",
+                #               min = 0, max = 1,
+                #               value = 0.05),
+               pickerInput(inputId = "tableoptions2", 
+                           label = "Select/deselect table output", 
+                           choices = table_options, options = list(`max-options` = 10), 
+                           multiple = TRUE),
+               pickerInput(inputId = "annotation2", 
                                label = "Select/deselect annotations", 
                                choices = snpeff_effects, options = list(`max-options` = 10), 
                                multiple = TRUE)))),
@@ -303,44 +314,170 @@ server<-function(input,output) {
       scale_colour_manual(values=c('red','blue'))
   })
 #ok so we want a table of the snps  
-  
+#Im making snpId, effect and ave pvalue compulsary collumns
+#snpId because then I can join to LDx
+#pvalue because of the slider
+#effect because of annotation drop down memu
 #not sure what to do with ldx not every snp has LDx value might have to do a seperate table for ldx
   output$SNP_table<-renderTable({
     if(strsplit(input$plot_var," +")[[1]][1]=="All_Genes") {
-      final_table<-'Select single gene'
+      final_table1<-'Select single gene'
     }
     else {
+      strsql<-input$tableoptions
       final_table<-'This is single gene'
+      strsql<-strsql[strsql != "LDxApple"]
+      strsql<-strsql[strsql != "LDxHaw"]
+      strsql<-gsub("scaffold", "snpFisher2.scaffold", strsql)
+      strsql<-gsub("position", "snpFisher2.position", strsql)
+      strsql<-gsub("ref", "snpFisher2.ref", strsql)
+      strsql<-gsub("alt", "snpFisher2.alt", strsql)
+      strsql<-gsub('appleave_MAF','poolmaf2.appleave_MAF', strsql)
+      strsql<-gsub('appleearly_MAF','poolmaf2.appleearly_MAF', strsql)
+      strsql<-gsub('applelate_MAF','poolmaf2.applelate_MAF', strsql)
+      strsql<-gsub('hawave_MAF','poolmaf2.hawave_MAF', strsql)
+      strsql<-gsub('hawearly_MAF','poolmaf2.hawearly_MAF', strsql)
+      strsql<-gsub('hawlate_MAF','poolmaf2.hawlate_MAF', strsql)
+      strsql<-gsub("protein_changes", "annotation2.protein_changes", strsql)
+      strsql<-gsub("impact", "annotation2.impact",strsql)
+      strsql<-gsub('appleave_hawave_fisher_score','snpFisher2.appleave_hawave_fisher_score',strsql)
+      strsql<-gsub('appleearly_applelate_fisher_score','snpFisher2.appleearly_applelate_fisher_score',strsql)
+      strsql<-gsub('appleearly_applelate_fisher_pvalue','snpFisher2.appleearly_applelate_fisher_pvalue',strsql)
+      strsql<-gsub('hawearly_hawlate_fisher_score','snpFisher2.hawearly_hawlate_fisher_score',strsql)
+      strsql<-gsub('hawearly_hawlate_fisher_pvalue','snpFisher2.hawearly_hawlate_fisher_pvalue',strsql)
+      strsql<-c('SELECT annotation2.snpId',strsql,"snpFisher2.appleave_hawave_fisher_pvalue, annotation2.effect FROM annotation2, snpFisher2, feature_alias,poolmaf2 WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=snpFisher2.snpId AND annotation2.snpId=poolmaf2.snpId AND snpFisher2.appleave_hawave_fisher_pvalue <  '%f';")
+      strsql<-paste(strsql,collapse=', ')
       transcript<-strsplit(input$plot_var," +")[[1]][1]
-#      final_table<-transcript
-      sql <- sprintf("SELECT annotation2.snpId, snpFisher2.scaffold, snpFisher2.position,annotation2.effect,annotation2.protein_changes,snpFisher2.appleave_hawave_fisher_pvalue,snpFisher2.appleearly_applelate_fisher_pvalue,snpFisher2.hawearly_hawlate_fisher_pvalue FROM  annotation2, snpFisher2, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=snpFisher2.snpId AND  snpFisher2.appleave_hawave_fisher_pvalue < '%f';",transcript,input$integerFisher)
+      sql <- sprintf(strsql,transcript,input$integerFisher)
       query <- dbGetQuery(con, sql)
-      sql <- sprintf("SELECT annotation2.snpId, poolLDx.MLE_AppleEarlyAppleLate, poolLDx.MLE_HawEarlyHawLate FROM  annotation2, poolLDx, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=poolLDx.snpId AND  (poolLDx.MLE_AppleEarlyAppleLate > '%f' OR poolLDx.MLE_HawEarlyHawLate > '%f');",transcript,input$integerLDX,input$integerLDXhaw)
-      query2 <- dbGetQuery(con, sql)
-      final_table<-left_join(query,query2,by='snpId') %>% distinct(.)  %>% filter(effect %in% input$annotation) %>% distinct(., snpId,effect, .keep_all = TRUE) #must filter this way to make this work distinct for multiple missense variations. where there is isoforms the missesnse variation will be slighly different number and now come up under the first distinct
+      final_table<-query
+      
+      #because Im having trouble doing the join in mysql running the LDx seperatly
+      if ('LDxApple' %in% input$tableoptions | 'LDxHaw' %in% input$tableoptions){
+        strsqlb<-input$tableoptions
+          strsqlb<-gsub("LDxApple", "poolLDx.MLE_AppleEarlyAppleLate", strsqlb)
+        strsqlb<-gsub("LDxHaw", "poolLDx.MLE_HawEarlyHawLate", strsqlb)
+        strsqlb<-strsqlb[strsqlb != "LDxHaw"]
+        strsqlb<-strsqlb[strsqlb != "scaffold"]
+        strsqlb<-strsqlb[strsqlb != "position"]
+        strsqlb<-strsqlb[strsqlb != "ref"]
+        strsqlb<-strsqlb[strsqlb != "alt"]
+        strsqlb<-strsqlb[strsqlb != 'appleave_MAF']
+        strsqlb<-strsqlb[strsqlb != 'appleearly_MAF']
+        strsqlb<-strsqlb[strsqlb != 'applelate_MAF']
+        strsqlb<-strsqlb[strsqlb != 'hawave_MAF']
+        strsqlb<-strsqlb[strsqlb != 'hawearly_MAF']
+        strsqlb<-strsqlb[strsqlb != 'hawlate_MAF']
+        strsqlb<-strsqlb[strsqlb != "protein_changes"]
+        strsqlb<-strsqlb[strsqlb != "impact"]
+        strsqlb<-strsqlb[strsqlb != 'appleave_hawave_fisher_score']
+        strsqlb<-strsqlb[strsqlb != 'appleearly_applelate_fisher_score']
+        strsqlb<-strsqlb[strsqlb != 'appleearly_applelate_fisher_pvalue']
+        strsqlb<-strsqlb[strsqlb != 'hawearly_hawlate_fisher_score']
+        strsqlb<-strsqlb[strsqlb != 'hawearly_hawlate_fisher_pvalue']
+        strsqlb<-c('SELECT annotation2.snpId',strsqlb, "FROM annotation2, poolLDx, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=poolLDx.snpId;")
+         strsqlb<-paste(strsqlb,collapse=', ')
+        strsqlb<-gsub(', FROM ',' FROM ',strsqlb)
+        transcript<-strsplit(input$plot_var," +")[[1]][1]
+        sqlb <- sprintf(strsqlb,transcript)
+        query2 <- dbGetQuery(con, sqlb)
+        final_table1<-left_join(final_table,query2,by='snpId') %>% distinct(.)  %>% filter(effect %in% input$annotation) %>% distinct(., snpId,effect, .keep_all = TRUE) #must filter this way to make this work distinct for multiple missense variations. where there is isoforms the missesnse variation will be slighly different number and now come up under the first distinct
+        #remove the last distinct if you want this information.
       }
-    # final_table
-    #  final_table<-head(together)
-    final_table
+      else{
+        final_table1<-final_table %>% distinct(.)  %>% filter(effect %in% input$annotation) %>% distinct(., snpId,effect, .keep_all = TRUE)
+      }  
+      
+    }
+
+    final_table1
   })
   
   output$SNP_table2<-renderTable({
+#    if(strsplit(input$plot_var2," +")[[1]][1]=="All_Genes") {
+#      final_table<-'Select single gene'
+#      }
+#    else {
+#    transcript<-strsplit(input$plot_var2," +")[[1]][1]
+#    sqlb <- sprintf("SELECT annotation2.snpId, snpFisher2.scaffold, snpFisher2.position, annotation2.effect,annotation2.protein_changes,snpFisher2.appleave_hawave_fisher_pvalue,snpFisher2.appleearly_applelate_fisher_pvalue,snpFisher2.hawearly_hawlate_fisher_pvalue FROM  annotation2, snpFisher2, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=snpFisher2.snpId AND snpFisher2.appleave_hawave_fisher_pvalue <  '%f';",transcript,input$integerFisher2)
+ #   queryb <- dbGetQuery(con, sqlb)
+#    sqlb <- sprintf("SELECT annotation2.snpId, poolLDx.MLE_AppleEarlyAppleLate, poolLDx.MLE_HawEarlyHawLate FROM  annotation2, poolLDx, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=poolLDx.snpId AND  (poolLDx.MLE_AppleEarlyAppleLate > '%f' OR poolLDx.MLE_HawEarlyHawLate > '%f');",transcript,input$integerLDX2,input$integerLDX2haw)
+ #   queryb2 <- dbGetQuery(con, sqlb)
+  #  final_table<-left_join(queryb,queryb2,by='snpId') %>% distinct(.)  %>% filter(effect %in% input$annotation2)  %>% distinct(., snpId,effect, .keep_all = TRUE )#must filter this way to make this work
+#    }
+#    final_table
+#  })
     if(strsplit(input$plot_var2," +")[[1]][1]=="All_Genes") {
-      final_table<-'Select single gene'
-      }
-    else {
-#    final_table<-'This is single gene'
-    transcript<-strsplit(input$plot_var2," +")[[1]][1]
-    #      final_table<-transcript
-    sqlb <- sprintf("SELECT annotation2.snpId, snpFisher2.scaffold, snpFisher2.position, annotation2.effect,annotation2.protein_changes,snpFisher2.appleave_hawave_fisher_pvalue,snpFisher2.appleearly_applelate_fisher_pvalue,snpFisher2.hawearly_hawlate_fisher_pvalue FROM  annotation2, snpFisher2, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=snpFisher2.snpId AND snpFisher2.appleave_hawave_fisher_pvalue <  '%f';",transcript,input$integerFisher2)
-    queryb <- dbGetQuery(con, sqlb)
-    sqlb <- sprintf("SELECT annotation2.snpId, poolLDx.MLE_AppleEarlyAppleLate, poolLDx.MLE_HawEarlyHawLate FROM  annotation2, poolLDx, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=poolLDx.snpId AND  (poolLDx.MLE_AppleEarlyAppleLate > '%f' OR poolLDx.MLE_HawEarlyHawLate > '%f');",transcript,input$integerLDX2,input$integerLDX2haw)
-    queryb2 <- dbGetQuery(con, sqlb)
-    final_table<-left_join(queryb,queryb2,by='snpId') %>% distinct(.)  %>% filter(effect %in% input$annotation2)  %>% distinct(., snpId,effect, .keep_all = TRUE )#must filter this way to make this work
+      final_table2<-'Select single gene'
     }
-        # final_table
-    #  final_table<-head(together)
-    final_table
+    else {
+      strsql2<-input$tableoptions2
+      final_tableb<-'This is single gene'
+      strsql2<-strsql2[strsql2 != "LDxApple"]
+      strsql2<-strsql2[strsql2 != "LDxHaw"]
+      strsql2<-gsub("scaffold", "snpFisher2.scaffold", strsql2)
+      strsql2<-gsub("position", "snpFisher2.position", strsql2)
+      strsql2<-gsub("ref", "snpFisher2.ref", strsql2)
+      strsql2<-gsub("alt", "snpFisher2.alt", strsql2)
+      strsql2<-gsub('appleave_MAF','poolmaf2.appleave_MAF', strsql2)
+      strsql2<-gsub('appleearly_MAF','poolmaf2.appleearly_MAF', strsql2)
+      strsql2<-gsub('applelate_MAF','poolmaf2.applelate_MAF', strsql2)
+      strsql2<-gsub('hawave_MAF','poolmaf2.hawave_MAF', strsql2)
+      strsql2<-gsub('hawearly_MAF','poolmaf2.hawearly_MAF', strsql2)
+      strsql2<-gsub('hawlate_MAF','poolmaf2.hawlate_MAF', strsql2)
+      strsql2<-gsub("protein_changes", "annotation2.protein_changes", strsql2)
+      strsql2<-gsub("impact", "annotation2.impact",strsql2)
+      strsql2<-gsub('appleave_hawave_fisher_score','snpFisher2.appleave_hawave_fisher_score',strsql2)
+      strsql2<-gsub('appleearly_applelate_fisher_score','snpFisher2.appleearly_applelate_fisher_score',strsql2)
+      strsql2<-gsub('appleearly_applelate_fisher_pvalue','snpFisher2.appleearly_applelate_fisher_pvalue',strsql2)
+      strsql2<-gsub('hawearly_hawlate_fisher_score','snpFisher2.hawearly_hawlate_fisher_score',strsql2)
+      strsql2<-gsub('hawearly_hawlate_fisher_pvalue','snpFisher2.hawearly_hawlate_fisher_pvalue',strsql2)
+      strsql2<-c('SELECT annotation2.snpId',strsql2,"snpFisher2.appleave_hawave_fisher_pvalue, annotation2.effect FROM annotation2, snpFisher2, feature_alias,poolmaf2 WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=snpFisher2.snpId AND annotation2.snpId=poolmaf2.snpId AND snpFisher2.appleave_hawave_fisher_pvalue <  '%f';")
+      strsql2<-paste(strsql2,collapse=', ')
+      transcript<-strsplit(input$plot_var2," +")[[1]][1]
+      sql2 <- sprintf(strsql2,transcript,input$integerFisher2)
+      queryb <- dbGetQuery(con, sql2)
+      final_table2<-queryb
+      
+      #because Im having trouble doing the join in mysql running the LDx seperatly
+      if ('LDxApple' %in% input$tableoptions2 | 'LDxHaw' %in% input$tableoptions2){
+        strsql2b<-input$tableoptions2
+        strsql2b<-gsub("LDxApple", "poolLDx.MLE_AppleEarlyAppleLate", strsql2b)
+        strsql2b<-gsub("LDxHaw", "poolLDx.MLE_HawEarlyHawLate", strsql2b)
+        strsql2b<-strsql2b[strsql2b != "LDxHaw"]
+        strsql2b<-strsql2b[strsql2b != "scaffold"]
+        strsql2b<-strsql2b[strsql2b != "position"]
+        strsql2b<-strsql2b[strsql2b != "ref"]
+        strsql2b<-strsql2b[strsql2b != "alt"]
+        strsql2b<-strsql2b[strsql2b != 'appleave_MAF']
+        strsql2b<-strsql2b[strsql2b != 'appleearly_MAF']
+        strsql2b<-strsql2b[strsql2b != 'applelate_MAF']
+        strsql2b<-strsql2b[strsql2b != 'hawave_MAF']
+        strsql2b<-strsql2b[strsql2b != 'hawearly_MAF']
+        strsql2b<-strsql2b[strsql2b != 'hawlate_MAF']
+        strsql2b<-strsql2b[strsql2b != "protein_changes"]
+        strsql2b<-strsql2b[strsql2b != "impact"]
+        strsql2b<-strsql2b[strsql2b != 'appleave_hawave_fisher_score']
+        strsql2b<-strsql2b[strsql2b != 'appleearly_applelate_fisher_score']
+        strsql2b<-strsql2b[strsql2b != 'appleearly_applelate_fisher_pvalue']
+        strsql2b<-strsql2b[strsql2b != 'hawearly_hawlate_fisher_score']
+        strsql2b<-strsql2b[strsql2b != 'hawearly_hawlate_fisher_pvalue']
+        strsql2b<-c('SELECT annotation2.snpId',strsql2b, "FROM annotation2, poolLDx, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=poolLDx.snpId;")
+        strsql2b<-paste(strsql2b,collapse=', ')
+        strsql2b<-gsub(', FROM ',' FROM ',strsql2b)
+        transcript<-strsplit(input$plot_var2," +")[[1]][1]
+        sql2b <- sprintf(strsql2b,transcript)
+        query2b <- dbGetQuery(con, sql2b)
+        final_table2<-left_join(final_table2,query2b,by='snpId') %>% distinct(.)  %>% filter(effect %in% input$annotation2) %>% distinct(., snpId,effect, .keep_all = TRUE) #must filter this way to make this work distinct for multiple missense variations. where there is isoforms the missesnse variation will be slighly different number and now come up under the first distinct
+        #remove the last distinct if you want this information.
+      }
+      else{
+        final_table2<-final_table2 %>% distinct(.)  %>% filter(effect %in% input$annotation2) %>% distinct(., snpId,effect, .keep_all = TRUE)
+      }  
+      
+    }
+    
+    final_table2
   })
   
 
