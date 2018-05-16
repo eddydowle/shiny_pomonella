@@ -340,12 +340,4 @@ shinyApp(ui=ui,server=server)
 #i think to do it properly  in dbplyr you would have to do joins
 #https://stackoverflow.com/questions/39864427/dplyr-sql-joins
 #Im too lazy to relearn how to call mysql from R so Im sticking with the mysql syntax but I think it would be better for new people to learn the dbplyr syntax so that its less learning and fits with tidyverse
-test<-'Across'
-FuncAnnotClust3 <- 
-    if(test=='Across'){
-      return(FuncAnnotClust1)
-    }
-    if(input$choose_across_between2=='Between'){
-      return(FuncAnnotClust1)
-    }
 
