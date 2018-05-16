@@ -92,7 +92,8 @@ ui<-fluidPage(
                                 choices=c('Across','Between'),selected='Across'),
                    radioButtons('across', label = 'pathway',
                                 choices = c("all","wnt","insulin","tor"),selected='all'),
-                   uiOutput(outputId = "gene")),
+                   uiOutput(outputId = "gene"))
+  ,
   conditionalPanel(condition="input.conditionedPanels==2",
                    radioButtons('choose_across_between2', label="Dataset_choice",
                                 choices=c('Across','Between'),selected='Across'),
