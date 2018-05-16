@@ -101,7 +101,7 @@ table_options<-c('scaffold','position','ref','alt','appleave_MAF','appleearly_MA
 ui<-fluidPage(
   conditionalPanel(condition="input.conditionedPanels==1",
                    fluidRow(column(3,
-                   radioButtons('population', label = 'population choice for snps',
+                   radioButtons('population', label = 'Population choice for SNP',
                               choices = c("urbana","grant"),selected='urbana'),
                    sliderInput("integer", "FDR:",
                                min = 0, max = 1,
@@ -114,7 +114,7 @@ ui<-fluidPage(
                    uiOutput(outputId = "gene")),
   #                 fuildRow(
                   column(4,
-                   sliderInput("integerFisher", "Max Fisher value SNP Apple Ave Haw Ave:",
+                   sliderInput("integerFisher", "Max fisher pvalue SNP Apple Ave Haw Ave:",
                                min = 0, max = 1,
                                value = 0.05),
  #                  fuildRow(
@@ -145,7 +145,7 @@ ui<-fluidPage(
          #         )),
   conditionalPanel(condition="input.conditionedPanels==2",
                    fluidRow(column(3,
-                   radioButtons('population2', label = 'population choice for snps',
+                   radioButtons('population2', label = 'Population choice for SNP',
                                choices = c("urbana","grant"),selected='urbana'),
                    sliderInput("integer2", "FDR:",
                                min = 0, max = 1,
@@ -155,7 +155,7 @@ ui<-fluidPage(
                                 choices = c("all","wnt","insulin","tor"),selected='all'),
                    uiOutput(outputId = "gene2")),
                    column(4,
-                   sliderInput("integerFisher2", "Max Fisher value SNP Apple Ave Haw Ave:",
+                   sliderInput("integerFisher2", "Max fisher pvalue SNP Apple Ave Haw Ave:",
                                min = 0, max = 1,
                                value = 0.05),
                #    sliderInput("integerLDX2", "Min LDx value SNP Apple Early Late:",
