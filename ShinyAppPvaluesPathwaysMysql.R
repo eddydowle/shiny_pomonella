@@ -18,7 +18,7 @@ library(reshape2)
 library(shinyWidgets)
 
 #library(RMySQL)
-con <- dbConnect(MySQL(),user="raglandlab", password="pomonella",dbname="PomUrbanaPoolseqSNP", host="localhost")
+con <- dbConnect(MySQL(),user="raglandlab", password="pomonella",dbname="PomUrbanaGrant", host="localhost")
 
 
 #to start with lets just work on the RNAtable
@@ -84,7 +84,7 @@ flybase_symbol_ID<-read.csv("/media/raglandlab/ExtraDrive1/RpomDiapauseRNAseqTra
 snpeff_effects<-c('3_prime_UTR_variant', '5_prime_UTR_premature_start_codon_gain_variant', '5_prime_UTR_variant', 'downstream_gene_variant', 'initiator_codon_variant', 'initiator_codon_variant&non_canonical_start_codon', 'initiator_codon_variant&splice_region_variant', 'intergenic_region', 'intragenic_variant', 'intron_variant', 'missense_variant', 'missense_variant&splice_region_variant', 'non_coding_transcript_exon_variant', 'non_coding_transcript_variant', 'splice_acceptor_variant&intron_variant', 'splice_acceptor_variant&splice_donor_variant&intron_variant', 'splice_donor_variant&intron_variant', 'splice_region_variant', 'splice_region_variant&initiator_codon_variant&non_canonical_start_codon', 'splice_region_variant&intron_variant', 'splice_region_variant&non_coding_transcript_exon_variant', 'splice_region_variant&stop_retained_variant', 'splice_region_variant&synonymous_variant', 'start_lost', 'start_lost&splice_region_variant', 'stop_gained', 'stop_gained&splice_region_variant', 'stop_lost', 'stop_lost&splice_region_variant', 'stop_retained_variant', 'synonymous_variant', 'upstream_gene_variant')
 snpeff_effects
 table_options<-c('scaffold','position','ref','alt','appleave_MAF','appleearly_MAF','applelate_MAF','hawave_MAF','hawearly_MAF','hawlate_MAF','protein_changes','impact'
-                 ,'appleave_hawave_fisher_score','appleearly_applelate_fisher_score','appleearly_applelate_fisher_pvalue','hawearly_hawlate_fisher_score',
+                 ,'appleave_hawave_fisher_score','appleave_hawave_fisher_pvalue','appleearly_applelate_fisher_score','appleearly_applelate_fisher_pvalue','hawearly_hawlate_fisher_score',
                  'hawearly_hawlate_fisher_pvalue',"LDxApple","LDxHaw")
 #link to mysql
 #slider for ldx, fisher values type of snp "protein change" "upstream" etc
@@ -101,6 +101,8 @@ table_options<-c('scaffold','position','ref','alt','appleave_MAF','appleearly_MA
 ui<-fluidPage(
   conditionalPanel(condition="input.conditionedPanels==1",
                    fluidRow(column(3,
+                   radioButtons('population', label = 'population choice for snps',
+                              choices = c("urbana","grant"),selected='urbana'),
                    sliderInput("integer", "FDR:",
                                min = 0, max = 1,
                                value = 0.05)),
@@ -143,6 +145,8 @@ ui<-fluidPage(
          #         )),
   conditionalPanel(condition="input.conditionedPanels==2",
                    fluidRow(column(3,
+                   radioButtons('population2', label = 'population choice for snps',
+                               choices = c("urbana","grant"),selected='urbana'),
                    sliderInput("integer2", "FDR:",
                                min = 0, max = 1,
                                value = 0.05)),
@@ -328,24 +332,24 @@ server<-function(input,output) {
       final_table<-'This is single gene'
       strsql<-strsql[strsql != "LDxApple"]
       strsql<-strsql[strsql != "LDxHaw"]
-      strsql<-gsub("scaffold", "snpFisher2.scaffold", strsql)
-      strsql<-gsub("position", "snpFisher2.position", strsql)
-      strsql<-gsub("ref", "snpFisher2.ref", strsql)
-      strsql<-gsub("alt", "snpFisher2.alt", strsql)
-      strsql<-gsub('appleave_MAF','poolmaf2.appleave_MAF', strsql)
-      strsql<-gsub('appleearly_MAF','poolmaf2.appleearly_MAF', strsql)
-      strsql<-gsub('applelate_MAF','poolmaf2.applelate_MAF', strsql)
-      strsql<-gsub('hawave_MAF','poolmaf2.hawave_MAF', strsql)
-      strsql<-gsub('hawearly_MAF','poolmaf2.hawearly_MAF', strsql)
-      strsql<-gsub('hawlate_MAF','poolmaf2.hawlate_MAF', strsql)
-      strsql<-gsub("protein_changes", "annotation2.protein_changes", strsql)
-      strsql<-gsub("impact", "annotation2.impact",strsql)
-      strsql<-gsub('appleave_hawave_fisher_score','snpFisher2.appleave_hawave_fisher_score',strsql)
-      strsql<-gsub('appleearly_applelate_fisher_score','snpFisher2.appleearly_applelate_fisher_score',strsql)
-      strsql<-gsub('appleearly_applelate_fisher_pvalue','snpFisher2.appleearly_applelate_fisher_pvalue',strsql)
-      strsql<-gsub('hawearly_hawlate_fisher_score','snpFisher2.hawearly_hawlate_fisher_score',strsql)
-      strsql<-gsub('hawearly_hawlate_fisher_pvalue','snpFisher2.hawearly_hawlate_fisher_pvalue',strsql)
-      strsql<-c('SELECT annotation2.snpId',strsql,"snpFisher2.appleave_hawave_fisher_pvalue, annotation2.effect FROM annotation2, snpFisher2, feature_alias,poolmaf2 WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=snpFisher2.snpId AND annotation2.snpId=poolmaf2.snpId AND snpFisher2.appleave_hawave_fisher_pvalue <  '%f';")
+      strsql<-gsub("scaffold", paste("snpFisher",input$population,'.',"scaffold",sep=''), strsql)
+      strsql<-gsub("position", paste("snpFisher",input$population,'.',"position",sep=''), strsql)
+      strsql<-gsub("ref", paste("snpFisher",input$population,'.',"ref",sep=''), strsql)
+      strsql<-gsub("alt", paste("snpFisher",input$population,'.',"alt",sep=''), strsql)
+      strsql<-gsub('appleave_MAF',paste(input$population,'poolmaf.',input$population,'_appleave_Min',sep=''), strsql)
+      strsql<-gsub('appleearly_MAF',paste(input$population,'poolmaf.',input$population,'_appleearly_Min',sep=''), strsql)
+      strsql<-gsub('applelate_MAF',paste(input$population,'poolmaf.',input$population,'_applelate_Min',sep=''), strsql)
+      strsql<-gsub('hawave_MAF',paste(input$population,'poolmaf.',input$population,'_hawave_Min',sep=''), strsql)
+      strsql<-gsub('hawearly_MAF',paste(input$population,'poolmaf.',input$population,'_hawearly_Min',sep=''), strsql)
+      strsql<-gsub('hawlate_MAF',paste(input$population,'poolmaf.',input$population,'_hawlate_Min',sep=''), strsql)
+      strsql<-gsub("protein_changes", "annotation.protein_changes", strsql)
+      strsql<-gsub("impact", "annotation.impact",strsql)
+      strsql<-gsub('appleave_hawave_fisher_score', paste("snpFisher",input$population,'.',input$population,'_appleave_hawave_fisher_score',sep=''),strsql)
+      strsql<-gsub('appleearly_applelate_fisher_score', paste("snpFisher",input$population,'.',input$population,'_appleearly_applelate_fisher_score',sep=''),strsql)
+      strsql<-gsub('appleearly_applelate_fisher_pvalue', paste("snpFisher",input$population,'.',input$population,'_appleearly_applelate_fisher_pvalue',sep=''),strsql)
+      strsql<-gsub('hawearly_hawlate_fisher_score', paste("snpFisher",input$population,'.',input$population,'_hawearly_hawlate_fisher_score',sep=''),strsql)
+      strsql<-gsub('hawearly_hawlate_fisher_pvalue', paste("snpFisher",input$population,'.',input$population,'_hawearly_hawlate_fisher_pvalue',sep=''),strsql)
+      strsql<-c('SELECT annotation.snpId',strsql,paste("snpFisher",input$population,'.',input$population,"_appleave_hawave_fisher_pvalue",sep=''), "annotation.effect FROM annotation", paste('snpFisher',input$population,sep=''), "feature_alias", paste(input$population,"poolmaf WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation.loc AND annotation.snpId=snpFisher", input$population,'.snpId AND ','annotation.snpId=',input$population,'poolmaf.snpId AND snpFisher',input$population,'.',input$population,"_appleave_hawave_fisher_pvalue <  '%f';",sep=''))
       strsql<-paste(strsql,collapse=', ')
       transcript<-strsplit(input$plot_var," +")[[1]][1]
       sql <- sprintf(strsql,transcript,input$integerFisher)
@@ -355,8 +359,8 @@ server<-function(input,output) {
       #because Im having trouble doing the join in mysql running the LDx seperatly
       if ('LDxApple' %in% input$tableoptions | 'LDxHaw' %in% input$tableoptions){
         strsqlb<-input$tableoptions
-          strsqlb<-gsub("LDxApple", "poolLDx.MLE_AppleEarlyAppleLate", strsqlb)
-        strsqlb<-gsub("LDxHaw", "poolLDx.MLE_HawEarlyHawLate", strsqlb)
+        strsqlb<-gsub("LDxApple", paste(input$population,"poolLDx.MLE_AppleEarlyAppleLate_",input$population,sep=''), strsqlb)
+        strsqlb<-gsub("LDxHaw", paste(input$population,"poolLDx.MLE_HawEarlyHawLate_",input$population,sep=''), strsqlb)
         strsqlb<-strsqlb[strsqlb != "LDxHaw"]
         strsqlb<-strsqlb[strsqlb != "scaffold"]
         strsqlb<-strsqlb[strsqlb != "position"]
@@ -375,7 +379,7 @@ server<-function(input,output) {
         strsqlb<-strsqlb[strsqlb != 'appleearly_applelate_fisher_pvalue']
         strsqlb<-strsqlb[strsqlb != 'hawearly_hawlate_fisher_score']
         strsqlb<-strsqlb[strsqlb != 'hawearly_hawlate_fisher_pvalue']
-        strsqlb<-c('SELECT annotation2.snpId',strsqlb, "FROM annotation2, poolLDx, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=poolLDx.snpId;")
+        strsqlb<-c('SELECT annotation.snpId',strsqlb,paste("FROM annotation, ",input$population,"poolLDx, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation.loc AND annotation.snpId=",input$population,"poolLDx.snpId;",sep=''))
          strsqlb<-paste(strsqlb,collapse=', ')
         strsqlb<-gsub(', FROM ',' FROM ',strsqlb)
         transcript<-strsplit(input$plot_var," +")[[1]][1]
@@ -399,11 +403,11 @@ server<-function(input,output) {
 #      }
 #    else {
 #    transcript<-strsplit(input$plot_var2," +")[[1]][1]
-#    sqlb <- sprintf("SELECT annotation2.snpId, snpFisher2.scaffold, snpFisher2.position, annotation2.effect,annotation2.protein_changes,snpFisher2.appleave_hawave_fisher_pvalue,snpFisher2.appleearly_applelate_fisher_pvalue,snpFisher2.hawearly_hawlate_fisher_pvalue FROM  annotation2, snpFisher2, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=snpFisher2.snpId AND snpFisher2.appleave_hawave_fisher_pvalue <  '%f';",transcript,input$integerFisher2)
+#    sqlb <- sprintf("SELECT annotation.snpId, snpFisher.scaffold, snpFisher.position, annotation.effect,annotation.protein_changes,snpFisher.appleave_hawave_fisher_pvalue,snpFisher.appleearly_applelate_fisher_pvalue,snpFisher.hawearly_hawlate_fisher_pvalue FROM  annotation, snpFisher, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation.loc AND annotation.snpId=snpFisher.snpId AND snpFisher.appleave_hawave_fisher_pvalue <  '%f';",transcript,input$integerFisher2)
  #   queryb <- dbGetQuery(con, sqlb)
-#    sqlb <- sprintf("SELECT annotation2.snpId, poolLDx.MLE_AppleEarlyAppleLate, poolLDx.MLE_HawEarlyHawLate FROM  annotation2, poolLDx, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=poolLDx.snpId AND  (poolLDx.MLE_AppleEarlyAppleLate > '%f' OR poolLDx.MLE_HawEarlyHawLate > '%f');",transcript,input$integerLDX2,input$integerLDX2haw)
+#    sqlb <- sprintf("SELECT annotation.snpId, poolLDx.MLE_AppleEarlyAppleLate, poolLDx.MLE_HawEarlyHawLate FROM  annotation, poolLDx, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation.loc AND annotation.snpId=poolLDx.snpId AND  (poolLDx.MLE_AppleEarlyAppleLate > '%f' OR poolLDx.MLE_HawEarlyHawLate > '%f');",transcript,input$integerLDX2,input$integerLDX2haw)
  #   queryb2 <- dbGetQuery(con, sqlb)
-  #  final_table<-left_join(queryb,queryb2,by='snpId') %>% distinct(.)  %>% filter(effect %in% input$annotation2)  %>% distinct(., snpId,effect, .keep_all = TRUE )#must filter this way to make this work
+  #  final_table<-left_join(queryb,queryb2,by='snpId') %>% distinct(.)  %>% filter(effect %in% input$annotation)  %>% distinct(., snpId,effect, .keep_all = TRUE )#must filter this way to make this work
 #    }
 #    final_table
 #  })
@@ -415,24 +419,24 @@ server<-function(input,output) {
       final_tableb<-'This is single gene'
       strsql2<-strsql2[strsql2 != "LDxApple"]
       strsql2<-strsql2[strsql2 != "LDxHaw"]
-      strsql2<-gsub("scaffold", "snpFisher2.scaffold", strsql2)
-      strsql2<-gsub("position", "snpFisher2.position", strsql2)
-      strsql2<-gsub("ref", "snpFisher2.ref", strsql2)
-      strsql2<-gsub("alt", "snpFisher2.alt", strsql2)
-      strsql2<-gsub('appleave_MAF','poolmaf2.appleave_MAF', strsql2)
-      strsql2<-gsub('appleearly_MAF','poolmaf2.appleearly_MAF', strsql2)
-      strsql2<-gsub('applelate_MAF','poolmaf2.applelate_MAF', strsql2)
-      strsql2<-gsub('hawave_MAF','poolmaf2.hawave_MAF', strsql2)
-      strsql2<-gsub('hawearly_MAF','poolmaf2.hawearly_MAF', strsql2)
-      strsql2<-gsub('hawlate_MAF','poolmaf2.hawlate_MAF', strsql2)
-      strsql2<-gsub("protein_changes", "annotation2.protein_changes", strsql2)
-      strsql2<-gsub("impact", "annotation2.impact",strsql2)
-      strsql2<-gsub('appleave_hawave_fisher_score','snpFisher2.appleave_hawave_fisher_score',strsql2)
-      strsql2<-gsub('appleearly_applelate_fisher_score','snpFisher2.appleearly_applelate_fisher_score',strsql2)
-      strsql2<-gsub('appleearly_applelate_fisher_pvalue','snpFisher2.appleearly_applelate_fisher_pvalue',strsql2)
-      strsql2<-gsub('hawearly_hawlate_fisher_score','snpFisher2.hawearly_hawlate_fisher_score',strsql2)
-      strsql2<-gsub('hawearly_hawlate_fisher_pvalue','snpFisher2.hawearly_hawlate_fisher_pvalue',strsql2)
-      strsql2<-c('SELECT annotation2.snpId',strsql2,"snpFisher2.appleave_hawave_fisher_pvalue, annotation2.effect FROM annotation2, snpFisher2, feature_alias,poolmaf2 WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=snpFisher2.snpId AND annotation2.snpId=poolmaf2.snpId AND snpFisher2.appleave_hawave_fisher_pvalue <  '%f';")
+      strsql2<-gsub("scaffold", paste("snpFisher",input$population2,'.',"scaffold",sep=''), strsql2)
+      strsql2<-gsub("position", paste("snpFisher",input$population2,'.',"position",sep=''), strsql2)
+      strsql2<-gsub("ref", paste("snpFisher",input$population2,'.',"ref",sep=''), strsql2)
+      strsql2<-gsub("alt", paste("snpFisher",input$population2,'.',"alt",sep=''), strsql2)
+      strsql2<-gsub('appleave_MAF',paste(input$population2,'poolmaf.',input$population2,'_appleave_Min',sep=''), strsql2)
+      strsql2<-gsub('appleearly_MAF',paste(input$population2,'poolmaf.',input$population2,'_appleearly_Min',sep=''), strsql2)
+      strsql2<-gsub('applelate_MAF',paste(input$population2,'poolmaf.',input$population2,'_applelate_Min',sep=''), strsql2)
+      strsql2<-gsub('hawave_MAF',paste(input$population2,'poolmaf.',input$population2,'_hawave_Min',sep=''), strsql2)
+      strsql2<-gsub('hawearly_MAF',paste(input$population2,'poolmaf.',input$population2,'_hawearly_Min',sep=''), strsql2)
+      strsql2<-gsub('hawlate_MAF',paste(input$population2,'poolmaf.',input$population2,'_hawlate_Min',sep=''), strsql2)
+      strsql2<-gsub("protein_changes", "annotation.protein_changes", strsql2)
+      strsql2<-gsub("impact", "annotation.impact",strsql2)
+      strsql2<-gsub('appleave_hawave_fisher_score', paste("snpFisher",input$population2,'.',input$population2,'_appleave_hawave_fisher_score',sep=''),strsql2)
+      strsql2<-gsub('appleearly_applelate_fisher_score', paste("snpFisher",input$population2,'.',input$population2,'_appleearly_applelate_fisher_score',sep=''),strsql2)
+      strsql2<-gsub('appleearly_applelate_fisher_pvalue', paste("snpFisher",input$population2,'.',input$population2,'_appleearly_applelate_fisher_pvalue',sep=''),strsql2)
+      strsql2<-gsub('hawearly_hawlate_fisher_score', paste("snpFisher",input$population2,'.',input$population2,'_hawearly_hawlate_fisher_score',sep=''),strsql2)
+      strsql2<-gsub('hawearly_hawlate_fisher_pvalue', paste("snpFisher",input$population2,'.',input$population2,'_hawearly_hawlate_fisher_pvalue',sep=''),strsql2)
+      strsql2<-c('SELECT annotation.snpId',strsql2,paste("snpFisher",input$population2,'.',input$population2,"_appleave_hawave_fisher_pvalue",sep=''), "annotation.effect FROM annotation", paste('snpFisher',input$population2,sep=''), "feature_alias", paste(input$population2,"poolmaf WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation.loc AND annotation.snpId=snpFisher", input$population2,'.snpId AND ','annotation.snpId=',input$population2,'poolmaf.snpId AND snpFisher',input$population2,'.',input$population2,"_appleave_hawave_fisher_pvalue <  '%f';",sep=''))
       strsql2<-paste(strsql2,collapse=', ')
       transcript<-strsplit(input$plot_var2," +")[[1]][1]
       sql2 <- sprintf(strsql2,transcript,input$integerFisher2)
@@ -442,8 +446,8 @@ server<-function(input,output) {
       #because Im having trouble doing the join in mysql running the LDx seperatly
       if ('LDxApple' %in% input$tableoptions2 | 'LDxHaw' %in% input$tableoptions2){
         strsql2b<-input$tableoptions2
-        strsql2b<-gsub("LDxApple", "poolLDx.MLE_AppleEarlyAppleLate", strsql2b)
-        strsql2b<-gsub("LDxHaw", "poolLDx.MLE_HawEarlyHawLate", strsql2b)
+        strsql2b<-gsub("LDxApple", paste(input$population2,"poolLDx.MLE_AppleEarlyAppleLate_",input$population2,sep=''), strsql2b)
+        strsql2b<-gsub("LDxHaw", paste(input$population2,"poolLDx.MLE_HawEarlyHawLate_",input$population2,sep=''), strsql2b)
         strsql2b<-strsql2b[strsql2b != "LDxHaw"]
         strsql2b<-strsql2b[strsql2b != "scaffold"]
         strsql2b<-strsql2b[strsql2b != "position"]
@@ -462,7 +466,7 @@ server<-function(input,output) {
         strsql2b<-strsql2b[strsql2b != 'appleearly_applelate_fisher_pvalue']
         strsql2b<-strsql2b[strsql2b != 'hawearly_hawlate_fisher_score']
         strsql2b<-strsql2b[strsql2b != 'hawearly_hawlate_fisher_pvalue']
-        strsql2b<-c('SELECT annotation2.snpId',strsql2b, "FROM annotation2, poolLDx, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation2.loc AND annotation2.snpId=poolLDx.snpId;")
+        strsql2b<-c('SELECT annotation.snpId',strsql2b,paste("FROM annotation, ",input$population2,"poolLDx, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation.loc AND annotation.snpId=",input$population2,"poolLDx.snpId;",sep=''))
         strsql2b<-paste(strsql2b,collapse=', ')
         strsql2b<-gsub(', FROM ',' FROM ',strsql2b)
         transcript<-strsplit(input$plot_var2," +")[[1]][1]
@@ -493,8 +497,8 @@ shinyApp(ui=ui,server=server)
 #going to try and switch to pool and dbplyr for connecting to the mysql server as apparently more efficient for shiny?
 #Im going to switch to dbplyr but not really because I can already do this in mysql language and I cant be arsed reworking in dbplyr
 #so this:
-#con <- dbConnect(MySQL(),user="raglandlab", password="pomonella",dbname="PomUrbanaPoolseqSNP", host="localhost")
-#query <- dbGetQuery(con,"SELECT feature_alias.gene_id, annotation.loc, annotation.effect,snpFisher.appleave_hawave_fisher_pvalue FROM feature_alias, annotation, snpFisher WHERE gene_id='gene10083' AND feature_alias.loc = annotation.loc AND annotation.snpId = snpFisher.snpId AND snpFisher.appleave_hawave_fisher_pvalue < 0.05;")
+#con <- dbConnect(MySQL(),user="raglandlab", password="pomonella",dbname="PomUrbanaGrant", host="localhost")
+#query <- dbGetQuery(con,"SELECT feature_alias.gene_id, snpFisherurbana.ref, snpFisherurbana.alt, annotation.loc, annotation.effect,snpFisherurbana.urbana_appleave_hawave_fisher_pvalue FROM feature_alias, annotation, snpFisherurbana WHERE (char_length(snpFisherurbana.ref) > 1 OR char_length(snpFisherurbana.alt) > 1) AND gene_id='gene10083' AND feature_alias.loc = annotation.loc AND annotation.snpId = snpFisherurbana.snpId AND snpFisherurbana.urbana_appleave_hawave_fisher_pvalue < 0.05;")
 
 #becomes:
 #my_db <- dbPool(
@@ -509,3 +513,8 @@ shinyApp(ui=ui,server=server)
 #i think to do it properly  in dbplyr you would have to do joins
 #https://stackoverflow.com/questions/39864427/dplyr-sql-joins
 #Im too lazy to relearn how to call mysql from R so Im sticking with the mysql syntax but I think it would be better for new people to learn the dbplyr syntax so that its less learning and fits with tidyverse
+
+
+
+
+
