@@ -84,8 +84,7 @@ flybase_symbol_ID<-read.csv("/media/raglandlab/ExtraDrive1/RpomDiapauseRNAseqTra
 snpeff_effects<-c('3_prime_UTR_variant', '5_prime_UTR_premature_start_codon_gain_variant', '5_prime_UTR_variant', 'downstream_gene_variant', 'initiator_codon_variant', 'initiator_codon_variant&non_canonical_start_codon', 'initiator_codon_variant&splice_region_variant', 'intergenic_region', 'intragenic_variant', 'intron_variant', 'missense_variant', 'missense_variant&splice_region_variant', 'non_coding_transcript_exon_variant', 'non_coding_transcript_variant', 'splice_acceptor_variant&intron_variant', 'splice_acceptor_variant&splice_donor_variant&intron_variant', 'splice_donor_variant&intron_variant', 'splice_region_variant', 'splice_region_variant&initiator_codon_variant&non_canonical_start_codon', 'splice_region_variant&intron_variant', 'splice_region_variant&non_coding_transcript_exon_variant', 'splice_region_variant&stop_retained_variant', 'splice_region_variant&synonymous_variant', 'start_lost', 'start_lost&splice_region_variant', 'stop_gained', 'stop_gained&splice_region_variant', 'stop_lost', 'stop_lost&splice_region_variant', 'stop_retained_variant', 'synonymous_variant', 'upstream_gene_variant')
 snpeff_effects
 table_options<-c('scaffold','position','ref','alt','appleave_MAF','appleearly_MAF','applelate_MAF','hawave_MAF','hawearly_MAF','hawlate_MAF','protein_changes','impact'
-                 ,'appleave_hawave_fisher_score','appleave_hawave_fisher_pvalue','appleearly_applelate_fisher_score','appleearly_applelate_fisher_pvalue','hawearly_hawlate_fisher_score',
-                 'hawearly_hawlate_fisher_pvalue',"LDxApple","LDxHaw")
+                 ,'appleave_hawave_fisher_score','appleave_hawave_fisher_pvalue','appleave_hawave_fisher_pvalue_adjust','appleearly_applelate_fisher_score','appleearly_applelate_fisher_pvalue','appleearly_applelate_fisher_pvalue_adjust','hawearly_hawlate_fisher_score','hawearly_hawlate_fisher_pvalue','hawearly_hawlate_fisher_pvalue_adjust',"LDxApple","LDxHaw")
 #link to mysql
 #slider for ldx, fisher values type of snp "protein change" "upstream" etc
 
@@ -114,7 +113,7 @@ ui<-fluidPage(
                    uiOutput(outputId = "gene")),
   #                 fuildRow(
                   column(4,
-                   sliderInput("integerFisher", "Max fisher pvalue SNP Apple Ave Haw Ave:",
+                   sliderInput("integerFisher", "Max fisher adjusted pvalue SNP Apple Ave Haw Ave:",
                                min = 0, max = 1,
                                value = 0.05),
  #                  fuildRow(
@@ -131,7 +130,7 @@ ui<-fluidPage(
                       multiple = TRUE),
                pickerInput(inputId = "annotation", 
                                      label = "Select/deselect annotations", 
-                                    choices = snpeff_effects, options = list(`max-options` = 10), #, options = list(`max-options` = 4)
+                                    choices = snpeff_effects, options = list(`actions-box` = TRUE), #, options = list(`max-options` = 4)
                                    multiple = TRUE)))),
             #         )),),
                                       #,
@@ -155,7 +154,7 @@ ui<-fluidPage(
                                 choices = c("all","wnt","insulin","tor"),selected='all'),
                    uiOutput(outputId = "gene2")),
                    column(4,
-                   sliderInput("integerFisher2", "Max fisher pvalue SNP Apple Ave Haw Ave:",
+                   sliderInput("integerFisher2", "Max fisher adjusted pvalue SNP Apple Ave Haw Ave:",
                                min = 0, max = 1,
                                value = 0.05),
                #    sliderInput("integerLDX2", "Min LDx value SNP Apple Early Late:",
@@ -170,7 +169,7 @@ ui<-fluidPage(
                            multiple = TRUE),
                pickerInput(inputId = "annotation2", 
                                label = "Select/deselect annotations", 
-                               choices = snpeff_effects, options = list(`max-options` = 10), 
+                               choices = snpeff_effects, options = list(`actions-box` = TRUE), 
                                multiple = TRUE)))),
   
   
@@ -345,11 +344,14 @@ server<-function(input,output) {
       strsql<-gsub("protein_changes", "annotation.protein_changes", strsql)
       strsql<-gsub("impact", "annotation.impact",strsql)
       strsql<-gsub('appleave_hawave_fisher_score', paste("snpFisher",input$population,'.',input$population,'_appleave_hawave_fisher_score',sep=''),strsql)
+      strsql<-gsub('appleave_hawave_fisher_pvalue', paste("snpFisher",input$population,'.',input$population,'_appleave_hawave_fisher_pvalue',sep=''),strsql)
       strsql<-gsub('appleearly_applelate_fisher_score', paste("snpFisher",input$population,'.',input$population,'_appleearly_applelate_fisher_score',sep=''),strsql)
       strsql<-gsub('appleearly_applelate_fisher_pvalue', paste("snpFisher",input$population,'.',input$population,'_appleearly_applelate_fisher_pvalue',sep=''),strsql)
+      strsql<-gsub('appleearly_applelate_fisher_pvalue_adjust', paste("snpFisher",input$population,'.',input$population,'_appleearly_applelate_fisher_pvalue_adjust',sep=''),strsql)
       strsql<-gsub('hawearly_hawlate_fisher_score', paste("snpFisher",input$population,'.',input$population,'_hawearly_hawlate_fisher_score',sep=''),strsql)
       strsql<-gsub('hawearly_hawlate_fisher_pvalue', paste("snpFisher",input$population,'.',input$population,'_hawearly_hawlate_fisher_pvalue',sep=''),strsql)
-      strsql<-c('SELECT annotation.snpId',strsql,paste("snpFisher",input$population,'.',input$population,"_appleave_hawave_fisher_pvalue",sep=''), "annotation.effect FROM annotation", paste('snpFisher',input$population,sep=''), "feature_alias", paste(input$population,"poolmaf WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation.loc AND annotation.snpId=snpFisher", input$population,'.snpId AND ','annotation.snpId=',input$population,'poolmaf.snpId AND snpFisher',input$population,'.',input$population,"_appleave_hawave_fisher_pvalue <  '%f';",sep=''))
+      strsql<-gsub('hawearly_hawlate_fisher_pvalue_adjust', paste("snpFisher",input$population,'.',input$population,'_hawearly_hawlate_fisher_pvalue_adjust',sep=''),strsql)
+      strsql<-c('SELECT annotation.snpId',strsql,paste("snpFisher",input$population,'.',input$population,"_appleave_hawave_fisher_pvalue_adjust",sep=''), "annotation.effect FROM annotation", paste('snpFisher',input$population,sep=''), "feature_alias", paste(input$population,"poolmaf WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation.loc AND annotation.snpId=snpFisher", input$population,'.snpId AND ','annotation.snpId=',input$population,'poolmaf.snpId AND snpFisher',input$population,'.',input$population,"_appleave_hawave_fisher_pvalue_adjust <  '%f';",sep=''))
       strsql<-paste(strsql,collapse=', ')
       transcript<-strsplit(input$plot_var," +")[[1]][1]
       sql <- sprintf(strsql,transcript,input$integerFisher)
@@ -375,10 +377,13 @@ server<-function(input,output) {
         strsqlb<-strsqlb[strsqlb != "protein_changes"]
         strsqlb<-strsqlb[strsqlb != "impact"]
         strsqlb<-strsqlb[strsqlb != 'appleave_hawave_fisher_score']
+        strsqlb<-strsqlb[strsqlb != 'appleave_hawave_fisher_pvalue']
         strsqlb<-strsqlb[strsqlb != 'appleearly_applelate_fisher_score']
         strsqlb<-strsqlb[strsqlb != 'appleearly_applelate_fisher_pvalue']
+        strsqlb<-strsqlb[strsqlb != 'appleearly_applelate_fisher_pvalue_adjust']
         strsqlb<-strsqlb[strsqlb != 'hawearly_hawlate_fisher_score']
         strsqlb<-strsqlb[strsqlb != 'hawearly_hawlate_fisher_pvalue']
+        strsqlb<-strsqlb[strsqlb != 'hawearly_hawlate_fisher_pvalue_adjust']
         strsqlb<-c('SELECT annotation.snpId',strsqlb,paste("FROM annotation, ",input$population,"poolLDx, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation.loc AND annotation.snpId=",input$population,"poolLDx.snpId;",sep=''))
          strsqlb<-paste(strsqlb,collapse=', ')
         strsqlb<-gsub(', FROM ',' FROM ',strsqlb)
@@ -432,11 +437,14 @@ server<-function(input,output) {
       strsql2<-gsub("protein_changes", "annotation.protein_changes", strsql2)
       strsql2<-gsub("impact", "annotation.impact",strsql2)
       strsql2<-gsub('appleave_hawave_fisher_score', paste("snpFisher",input$population2,'.',input$population2,'_appleave_hawave_fisher_score',sep=''),strsql2)
+      strsql2<-gsub('appleave_hawave_fisher_pvalue', paste("snpFisher",input$population2,'.',input$population2,'_appleave_hawave_fisher_pvalue',sep=''),strsql2)
       strsql2<-gsub('appleearly_applelate_fisher_score', paste("snpFisher",input$population2,'.',input$population2,'_appleearly_applelate_fisher_score',sep=''),strsql2)
       strsql2<-gsub('appleearly_applelate_fisher_pvalue', paste("snpFisher",input$population2,'.',input$population2,'_appleearly_applelate_fisher_pvalue',sep=''),strsql2)
+      strsql2<-gsub('appleearly_applelate_fisher_pvalue_adjust', paste("snpFisher",input$population2,'.',input$population2,'_appleearly_applelate_fisher_pvalue_adjust',sep=''),strsql2)
       strsql2<-gsub('hawearly_hawlate_fisher_score', paste("snpFisher",input$population2,'.',input$population2,'_hawearly_hawlate_fisher_score',sep=''),strsql2)
       strsql2<-gsub('hawearly_hawlate_fisher_pvalue', paste("snpFisher",input$population2,'.',input$population2,'_hawearly_hawlate_fisher_pvalue',sep=''),strsql2)
-      strsql2<-c('SELECT annotation.snpId',strsql2,paste("snpFisher",input$population2,'.',input$population2,"_appleave_hawave_fisher_pvalue",sep=''), "annotation.effect FROM annotation", paste('snpFisher',input$population2,sep=''), "feature_alias", paste(input$population2,"poolmaf WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation.loc AND annotation.snpId=snpFisher", input$population2,'.snpId AND ','annotation.snpId=',input$population2,'poolmaf.snpId AND snpFisher',input$population2,'.',input$population2,"_appleave_hawave_fisher_pvalue <  '%f';",sep=''))
+      strsql2<-gsub('hawearly_hawlate_fisher_pvalue_adjust', paste("snpFisher",input$population2,'.',input$population2,'_hawearly_hawlate_fisher_pvalue_adjust',sep=''),strsql2)
+      strsql2<-c('SELECT annotation.snpId',strsql2,paste("snpFisher",input$population2,'.',input$population2,"_appleave_hawave_fisher_pvalue_adjust",sep=''), "annotation.effect FROM annotation", paste('snpFisher',input$population2,sep=''), "feature_alias", paste(input$population2,"poolmaf WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation.loc AND annotation.snpId=snpFisher", input$population2,'.snpId AND ','annotation.snpId=',input$population2,'poolmaf.snpId AND snpFisher',input$population2,'.',input$population2,"_appleave_hawave_fisher_pvalue_adjust <  '%f';",sep=''))
       strsql2<-paste(strsql2,collapse=', ')
       transcript<-strsplit(input$plot_var2," +")[[1]][1]
       sql2 <- sprintf(strsql2,transcript,input$integerFisher2)
@@ -462,10 +470,13 @@ server<-function(input,output) {
         strsql2b<-strsql2b[strsql2b != "protein_changes"]
         strsql2b<-strsql2b[strsql2b != "impact"]
         strsql2b<-strsql2b[strsql2b != 'appleave_hawave_fisher_score']
+        strsql2b<-strsql2b[strsql2b != 'appleave_hawave_fisher_pvalue']
         strsql2b<-strsql2b[strsql2b != 'appleearly_applelate_fisher_score']
         strsql2b<-strsql2b[strsql2b != 'appleearly_applelate_fisher_pvalue']
+        strsql2b<-strsql2b[strsql2b != 'appleearly_applelate_fisher_pvalue_adjust']
         strsql2b<-strsql2b[strsql2b != 'hawearly_hawlate_fisher_score']
         strsql2b<-strsql2b[strsql2b != 'hawearly_hawlate_fisher_pvalue']
+        strsql2b<-strsql2b[strsql2b != 'hawearly_hawlate_fisher_pvalue_adjust']
         strsql2b<-c('SELECT annotation.snpId',strsql2b,paste("FROM annotation, ",input$population2,"poolLDx, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation.loc AND annotation.snpId=",input$population2,"poolLDx.snpId;",sep=''))
         strsql2b<-paste(strsql2b,collapse=', ')
         strsql2b<-gsub(', FROM ',' FROM ',strsql2b)
