@@ -393,7 +393,7 @@ server<-function(input,output) {
     }
     
     else if(strsplit(input$plot_var," +")[[1]][1]=="All_Genes" && input$within=="insulin") {
-      together.test<-together%>% filter(., flybase %in% insulin$flyid)%>% filter(.,FDR < input$integer2)
+      together.test<-together%>% filter(., flybase %in% insulin$flyid)%>% filter(.,FDR < input$integer)
   #    title<-"All_Genes" 
    #   linesize<-1
       avector <- together.test[['gene_id']]
@@ -429,7 +429,7 @@ server<-function(input,output) {
     
     else if(strsplit(input$plot_var," +")[[1]][1]=="All_Genes" && input$within=="wnt") {
 #      final_table1<-'Select single gene wnt'
-      together.test<-together%>% filter(., flybase %in% wnt$flyid)%>% filter(.,FDR < input$integer2)
+      together.test<-together%>% filter(., flybase %in% wnt$flyid)%>% filter(.,FDR < input$integer)
       avector <- together.test[['gene_id']]
       avector.str<-gsub('^',"feature_alias.gene_id='",avector) %>% gsub('$',"' OR ",.) %>% paste(.,collapse = '') %>%  gsub(' OR $',"",.)
       strsql<-input$tableoptions
@@ -461,7 +461,7 @@ server<-function(input,output) {
     
     else if(strsplit(input$plot_var," +")[[1]][1]=="All_Genes" && input$within=="tor") {
 #      final_table1<-'Select single gene tor'
-      together.test<-together%>% filter(., flybase %in% tor$flyid)%>% filter(.,FDR < input$integer2)
+      together.test<-together%>% filter(., flybase %in% tor$flyid)%>% filter(.,FDR < input$integer)
       avector <- together.test[['gene_id']]
       avector.str<-gsub('^',"feature_alias.gene_id='",avector) %>% gsub('$',"' OR ",.) %>% paste(.,collapse = '') %>%  gsub(' OR $',"",.)
       strsql<-input$tableoptions
@@ -546,20 +546,20 @@ server<-function(input,output) {
   #    linesize<-1}
       avector <- together.across.test[['gene_id']]
       avector.str<-gsub('^',"feature_alias.gene_id='",avector) %>% gsub('$',"' OR ",.) %>% paste(.,collapse = '') %>%  gsub(' OR $',"",.)
-      strsql2<-input$tableoptions
+      strsql2<-input$tableoptions2
       #    final_table<-'This is single gene'
       strsql2<-cleanup(strsql2)
-      strsql2<-c('SELECT annotation.snpId','feature_alias.gene_id, feature_alias.Flybase_gene_symbol',strsql2,paste("snpFisher",input$population,'.',input$population,"_appleave_hawave_fisher_pvalue_adjust",sep=''), "annotation.effect FROM annotation", paste('snpFisher',input$population,sep=''), "feature_alias", paste(input$population,"poolmaf WHERE (%s) AND feature_alias.loc = annotation.loc AND annotation.snpId=snpFisher", input$population,'.snpId AND ','annotation.snpId=',input$population,'poolmaf.snpId AND snpFisher',input$population,'.',input$population,"_appleave_hawave_fisher_pvalue_adjust <  '%f';",sep=''))
+      strsql2<-c('SELECT annotation.snpId','feature_alias.gene_id, feature_alias.Flybase_gene_symbol',strsql2,paste("snpFisher",input$population2,'.',input$population2,"_appleave_hawave_fisher_pvalue_adjust",sep=''), "annotation.effect FROM annotation", paste('snpFisher',input$population2,sep=''), "feature_alias", paste(input$population2,"poolmaf WHERE (%s) AND feature_alias.loc = annotation.loc AND annotation.snpId=snpFisher", input$population2,'.snpId AND ','annotation.snpId=',input$population2,'poolmaf.snpId AND snpFisher',input$population2,'.',input$population2,"_appleave_hawave_fisher_pvalue_adjust <  '%f';",sep=''))
       strsql2<-paste(strsql2,collapse=', ')
  #     transcript<-strsplit(input$plot_var2," +")[[1]][1]
       sql2 <- sprintf(strsql2,avector.str,input$integerFisher2)
       queryb <- dbGetQuery(con, sql2)
       final_table2<-queryb
       #because Im having trouble doing the join in mysql running the LDx seperatly
-      if ('LDxApple' %in% input$tableoptions | 'LDxHaw' %in% input$tableoptions){
-        strsql2b<-input$tableoptions
+      if ('LDxApple' %in% input$tableoptions2 | 'LDxHaw' %in% input$tableoptions2){
+        strsql2b<-input$tableoptions2
         strsql2b<-cleanupldx(strsql2b)
-        strsql2b<-c('SELECT annotation.snpId',strsql2b,paste("FROM annotation, ",input$population2,"poolLDx, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation.loc AND annotation.snpId=",input$population2,"poolLDx.snpId;",sep=''))
+        strsql2b<-c('SELECT annotation.snpId',strsql2b,paste("FROM annotation, ",input$population2,"poolLDx, feature_alias WHERE (%s) AND feature_alias.loc = annotation.loc AND annotation.snpId=",input$population2,"poolLDx.snpId;",sep=''))
         strsql2b<-paste(strsql2b,collapse=', ')
         strsql2b<-gsub(', FROM ',' FROM ',strsql2b)
     #    transcript<-strsplit(input$plot_var2," +")[[1]][1]
@@ -579,10 +579,10 @@ server<-function(input,output) {
   #    linesize<-1}
       avector <- together.across.test[['gene_id']]
       avector.str<-gsub('^',"feature_alias.gene_id='",avector) %>% gsub('$',"' OR ",.) %>% paste(.,collapse = '') %>%  gsub(' OR $',"",.)
-      strsql2<-input$tableoptions
+      strsql2<-input$tableoptions2
       #    final_table<-'This is single gene'
       strsql2<-cleanup(strsql2)
-      strsql2<-c('SELECT annotation.snpId','feature_alias.gene_id, feature_alias.Flybase_gene_symbol',strsql2,paste("snpFisher",input$population,'.',input$population,"_appleave_hawave_fisher_pvalue_adjust",sep=''), "annotation.effect FROM annotation", paste('snpFisher',input$population,sep=''), "feature_alias", paste(input$population,"poolmaf WHERE (%s) AND feature_alias.loc = annotation.loc AND annotation.snpId=snpFisher", input$population,'.snpId AND ','annotation.snpId=',input$population,'poolmaf.snpId AND snpFisher',input$population,'.',input$population,"_appleave_hawave_fisher_pvalue_adjust <  '%f';",sep=''))
+      strsql2<-c('SELECT annotation.snpId','feature_alias.gene_id, feature_alias.Flybase_gene_symbol',strsql2,paste("snpFisher",input$population2,'.',input$population2,"_appleave_hawave_fisher_pvalue_adjust",sep=''), "annotation.effect FROM annotation", paste('snpFisher',input$population2,sep=''), "feature_alias", paste(input$population2,"poolmaf WHERE (%s) AND feature_alias.loc = annotation.loc AND annotation.snpId=snpFisher", input$population2,'.snpId AND ','annotation.snpId=',input$population2,'poolmaf.snpId AND snpFisher',input$population2,'.',input$population2,"_appleave_hawave_fisher_pvalue_adjust <  '%f';",sep=''))
       strsql2<-paste(strsql2,collapse=', ')
  #     transcript<-strsplit(input$plot_var2," +")[[1]][1]
       sql2 <- sprintf(strsql2,avector.str,input$integerFisher2)
@@ -590,10 +590,10 @@ server<-function(input,output) {
       final_table2<-queryb
       
       #because Im having trouble doing the join in mysql running the LDx seperatly
-      if ('LDxApple' %in% input$tableoptions | 'LDxHaw' %in% input$tableoptions){
-        strsql2b<-input$tableoptions
+      if ('LDxApple' %in% input$tableoptions2 | 'LDxHaw' %in% input$tableoptions2){
+        strsql2b<-input$tableoptions2
         strsql2b<-cleanupldx(strsql2b)
-        strsql2b<-c('SELECT annotation.snpId',strsql2b,paste("FROM annotation, ",input$population2,"poolLDx, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation.loc AND annotation.snpId=",input$population2,"poolLDx.snpId;",sep=''))
+        strsql2b<-c('SELECT annotation.snpId',strsql2b,paste("FROM annotation, ",input$population2,"poolLDx, feature_alias WHERE (%s) AND feature_alias.loc = annotation.loc AND annotation.snpId=",input$population2,"poolLDx.snpId;",sep=''))
         strsql2b<-paste(strsql2b,collapse=', ')
         strsql2b<-gsub(', FROM ',' FROM ',strsql2b)
       #  transcript<-strsplit(input$plot_var2," +")[[1]][1]
@@ -615,10 +615,10 @@ server<-function(input,output) {
   #    linesize<-1}
       avector <- together.across.test[['gene_id']]
       avector.str<-gsub('^',"feature_alias.gene_id='",avector) %>% gsub('$',"' OR ",.) %>% paste(.,collapse = '') %>%  gsub(' OR $',"",.)
-      strsql2<-input$tableoptions
+      strsql2<-input$tableoptions2
       #    final_table<-'This is single gene'
       strsql2<-cleanup(strsql2)
-      strsql2<-c('SELECT annotation.snpId','feature_alias.gene_id, feature_alias.Flybase_gene_symbol',strsql2,paste("snpFisher",input$population,'.',input$population,"_appleave_hawave_fisher_pvalue_adjust",sep=''), "annotation.effect FROM annotation", paste('snpFisher',input$population,sep=''), "feature_alias", paste(input$population,"poolmaf WHERE (%s) AND feature_alias.loc = annotation.loc AND annotation.snpId=snpFisher", input$population,'.snpId AND ','annotation.snpId=',input$population,'poolmaf.snpId AND snpFisher',input$population,'.',input$population,"_appleave_hawave_fisher_pvalue_adjust <  '%f';",sep=''))
+      strsql2<-c('SELECT annotation.snpId','feature_alias.gene_id, feature_alias.Flybase_gene_symbol',strsql2,paste("snpFisher",input$population2,'.',input$population2,"_appleave_hawave_fisher_pvalue_adjust",sep=''), "annotation.effect FROM annotation", paste('snpFisher',input$population2,sep=''), "feature_alias", paste(input$population2,"poolmaf WHERE (%s) AND feature_alias.loc = annotation.loc AND annotation.snpId=snpFisher", input$population2,'.snpId AND ','annotation.snpId=',input$population2,'poolmaf.snpId AND snpFisher',input$population2,'.',input$population2,"_appleave_hawave_fisher_pvalue_adjust <  '%f';",sep=''))
       strsql2<-paste(strsql2,collapse=', ')
  #     transcript<-strsplit(input$plot_var2," +")[[1]][1]
       sql2 <- sprintf(strsql2,avector.str,input$integerFisher2)
@@ -626,10 +626,10 @@ server<-function(input,output) {
       final_table2<-queryb
       
       #because Im having trouble doing the join in mysql running the LDx seperatly
-      if ('LDxApple' %in% input$tableoptions | 'LDxHaw' %in% input$tableoptions){
-        strsql2b<-input$tableoptions
+      if ('LDxApple' %in% input$tableoptions2 | 'LDxHaw' %in% input$tableoptions2){
+        strsql2b<-input$tableoptions2
         strsql2b<-cleanupldx(strsql2b)
-        strsql2b<-c('SELECT annotation.snpId',strsql2b,paste("FROM annotation, ",input$population2,"poolLDx, feature_alias WHERE feature_alias.gene_id='%s' AND feature_alias.loc = annotation.loc AND annotation.snpId=",input$population2,"poolLDx.snpId;",sep=''))
+        strsql2b<-c('SELECT annotation.snpId',strsql2b,paste("FROM annotation, ",input$population2,"poolLDx, feature_alias WHERE (%s) AND feature_alias.loc = annotation.loc AND annotation.snpId=",input$population2,"poolLDx.snpId;",sep=''))
         strsql2b<-paste(strsql2b,collapse=', ')
         strsql2b<-gsub(', FROM ',' FROM ',strsql2b)
    #     transcript<-strsplit(input$plot_var2," +")[[1]][1]
