@@ -3,7 +3,7 @@
 
 #ejd 2018
 
-
+library(pheatmap)
 library(gplots)
 library(ggplot2)
 library(reshape)
@@ -16,6 +16,7 @@ library(dplyr)
 library(RMySQL)
 library(reshape2)
 library(shinyWidgets)
+library(RDAVIDWebService)
 
 
 
@@ -79,6 +80,9 @@ insulin<-read.table("/media/raglandlab/ExtraDrive1/RpomDiapauseRNAseqTraj_GJR/RN
 
 #flybase_symbol_ID<-read.csv("/Users/edwinadowle/Documents/Cerasi/Pomonella/RSEMresults/AppleBackToHaw2MremoveBadHaw4M/shiny/fbgn_annotation_ID_fb_2017_06.tsv",header=T,row.names=NULL,sep="\t",stringsAsFactors = F,strip.white=T)
 flybase_symbol_ID<-read.csv("/media/raglandlab/ExtraDrive1/RpomDiapauseRNAseqTraj_GJR/RNAseqToMysql/fbgn_annotation_ID_fb_2017_06.tsv",header=T,row.names=NULL,sep="\t",stringsAsFactors = F,strip.white=T)
+
+my_palette <- colorRampPalette(c("darkturquoise", "darkgoldenrod2"))(n = 1000)
+
 
 snpeff_effects<-c('3_prime_UTR_variant', '5_prime_UTR_premature_start_codon_gain_variant', '5_prime_UTR_variant', 'downstream_gene_variant', 'initiator_codon_variant', 'initiator_codon_variant&non_canonical_start_codon', 'initiator_codon_variant&splice_region_variant', 'intergenic_region', 'intragenic_variant', 'intron_variant', 'missense_variant', 'missense_variant&splice_region_variant', 'non_coding_transcript_exon_variant', 'non_coding_transcript_variant', 'splice_acceptor_variant&intron_variant', 'splice_acceptor_variant&splice_donor_variant&intron_variant', 'splice_donor_variant&intron_variant', 'splice_region_variant', 'splice_region_variant&initiator_codon_variant&non_canonical_start_codon', 'splice_region_variant&intron_variant', 'splice_region_variant&non_coding_transcript_exon_variant', 'splice_region_variant&stop_retained_variant', 'splice_region_variant&synonymous_variant', 'start_lost', 'start_lost&splice_region_variant', 'stop_gained', 'stop_gained&splice_region_variant', 'stop_lost', 'stop_lost&splice_region_variant', 'stop_retained_variant', 'synonymous_variant', 'upstream_gene_variant')
 snpeff_effects
@@ -165,7 +169,7 @@ ui<-fluidPage(
                         column(4,offset=1,
                                checkboxGroupButtons('comparisons', label='MAF comparisons',
                                             choices=c('AppleAverage & HawAverage','AppleEarly & AppleLate','HawEarly & HawLate'),
-                                            selected=c('AppleAverage & HawAverage','HawEarly & HawLate')),
+                                            selected=c('AppleEarly & AppleLate', 'HawEarly & HawLate')), #AppleAverage & HawAverage','HawEarly & HawLate'
                                sliderInput("pvalue", "Adjusted pvalue (is true for populations in comparisons):",
                                            min = 0, max = 1,
                                            value = 0.05)),
@@ -179,20 +183,25 @@ ui<-fluidPage(
                    fluidRow(column(3,
                                    radioButtons('population2', label = 'Population choice for SNP',
                                                 choices = c("urbana","grant"),selected='urbana'),
-                                   sliderInput("tajimaD", "Absolute TajimaD values:",
+                                   sliderInput("tajimaDApple", "Absolute TajimaD values Apple:",
                                                min = 0, max = 10,
                                                value = 2)),
-                            column(4, offset=1,
+                            sliderInput("tajimaDHaw", "Absolute TajimaD values Haw:",
+                                        min = 0, max = 10,
+                                        value = 2)),
+                   column(4, offset=1,
                                    radioButtons('sign', label = 'Sign of TajimaD values',
-                                                choices = c("Both","positive","negative"),selected='both'),
-                                   uiOutput(outputId = "gene2")),
+                                                choices = c("Both","positive","negative"),selected='Both'),
+                                   radioButtons('tabletype2', label = "Raw or David Table",
+                                                choices = c ("David","Raw","Summary Gene"),selected='David')),
+                             #      uiOutput(outputId = "gene2")),
                             column(4,
-                                   sliderInput("pvalue2", "Adjusted pvalue:",
+                                   sliderInput("pvalue2", "Adjusted pvalue AppleAve and HawAve:",
                                                min = 0, max = 1,
-                                               value = 0.0),
-                                   uiOutput(outputId = "module_selection"),
-                                   uiOutput(outputId = "gene_module"),
-                                   uiOutput(outputId = "gene_module_enrichment")))),
+                                               value = 0.5),
+          #                         uiOutput(outputId = "module_selection"),
+           #                        uiOutput(outputId = "gene_module"),
+                                   uiOutput(outputId = "gene_module_enrichment"))),
 
   mainPanel(
     h4("SNP MAF TajimaD pvalue"),
@@ -204,7 +213,7 @@ ui<-fluidPage(
         value=1 
       ),
       tabPanel(
-        h4("Modules"),
+        h4("TajimaD"),
         tableOutput("David_table"),
         value=2
       )
@@ -267,38 +276,37 @@ server<-function(input,output) {
     if ('AppleAverage & HawAverage' %in% strsql & 'HawEarly & HawLate' %in% strsql & !('AppleEarly & AppleLate' %in% strsql)){
      final_table<-mysqlcall()
       out.snp<-final_table[!duplicated(final_table[,'snpId']),]
-      test1<-out.snp %>% select(.,matches('appleave_Maj|hawave_Maj')) %>% mutate(appleave_hawave = .[,1]-.[,2]) %>% select(.,appleave_hawave)
-      test2<-out.snp %>% select(.,matches('hawearly_Maj|hawlate_Maj')) %>% mutate(hawearly_hawlate = .[,1]-.[,2]) %>% select(.,hawearly_hawlate)
+      test1<-out.snp %>% dplyr::select(.,matches('appleave_Maj|hawave_Maj')) %>% mutate(appleave_hawave = .[,1]-.[,2]) %>% dplyr::select(.,appleave_hawave)
+      test2<-out.snp %>% dplyr::select(.,matches('hawearly_Maj|hawlate_Maj')) %>% mutate(hawearly_hawlate = .[,1]-.[,2]) %>% dplyr::select(.,hawearly_hawlate)
       test<-cbind(test1,test2) %>% as.matrix
     }
 
-        else if ('AppleAverage & HawAverage' %in% strsql & 'AppleEarly & AppleLate' %in% strsql & !('HawEarly & HawLate' %in% strsql)){
+     else if ('AppleAverage & HawAverage' %in% strsql & 'AppleEarly & AppleLate' %in% strsql & !('HawEarly & HawLate' %in% strsql)){
       final_table<-mysqlcall()
       out.snp<-final_table[!duplicated(final_table[,'snpId']),]
-      test1<-out.snp %>% select(.,matches('appleave_Maj|hawave_Maj')) %>% mutate(appleave_hawave = .[,1]-.[,2]) %>% select(.,appleave_hawave)
-      test2<-out.snp %>% select(.,matches('appleearly_Maj|applelate_Maj')) %>% mutate(appleearly_applelate = .[,1]-.[,2]) %>% select(.,appleearly_applelate)
+      test1<-out.snp %>% dplyr::select(.,matches('appleave_Maj|hawave_Maj')) %>% mutate(appleave_hawave = .[,1]-.[,2]) %>% dplyr::select(.,appleave_hawave)
+      test2<-out.snp %>% dplyr::select(.,matches('appleearly_Maj|applelate_Maj')) %>% mutate(appleearly_applelate = .[,1]-.[,2]) %>% dplyr::select(.,appleearly_applelate)
       test<-cbind(test1,test2) %>% as.matrix
        }
     
     else if ('AppleEarly & AppleLate' %in% strsql & 'HawEarly & HawLate' %in% strsql & !('AppleAverage & HawAverage' %in% strsql)){
       final_table<-mysqlcall()
       out.snp<-final_table[!duplicated(final_table[,'snpId']),]
-      test1<-out.snp %>% select(.,matches('appleearly_Maj|applelate_Maj')) %>% mutate(appleearly_applelate = .[,1]-.[,2]) %>% select(.,appleearly_applelate)
-      test2<-out.snp %>% select(.,matches('hawearly_Maj|hawlate_Maj')) %>% mutate(hawearly_hawlate = .[,1]-.[,2]) %>% select(.,hawearly_hawlate)
+      test1<-out.snp %>% dplyr::select(.,matches('appleearly_Maj|applelate_Maj')) %>% mutate(appleearly_applelate = .[,1]-.[,2]) %>% dplyr::select(.,appleearly_applelate)
+      test2<-out.snp %>% dplyr::select(.,matches('hawearly_Maj|hawlate_Maj')) %>% mutate(hawearly_hawlate = .[,1]-.[,2]) %>% dplyr::select(.,hawearly_hawlate)
       test<-cbind(test1,test2) %>% as.matrix
        }
 
         else {
       final_table<-mysqlcall()
       out.snp<-final_table[!duplicated(final_table[,'snpId']),]
-      test1<-out.snp %>% select(.,matches('appleave_Maj|hawave_Maj')) %>% mutate(appleave_hawave = .[,1]-.[,2]) %>% select(.,appleave_hawave)
-      test2<-out.snp %>% select(.,matches('hawearly_Maj|hawlate_Maj')) %>% mutate(hawearly_hawlate = .[,1]-.[,2]) %>% select(.,hawearly_hawlate)
-      test3<-out.snp %>% select(.,matches('appleearly_Maj|applelate_Maj')) %>% mutate(appleearly_applelate = .[,1]-.[,2]) %>% select(.,appleearly_applelate)
+      test1<-out.snp %>% dplyr::select(.,matches('appleave_Maj|hawave_Maj')) %>% mutate(appleave_hawave = .[,1]-.[,2]) %>% dplyr::select(.,appleave_hawave)
+      test2<-out.snp %>% dplyr::select(.,matches('hawearly_Maj|hawlate_Maj')) %>% mutate(hawearly_hawlate = .[,1]-.[,2]) %>% dplyr::select(.,hawearly_hawlate)
+      test3<-out.snp %>% dplyr::select(.,matches('appleearly_Maj|applelate_Maj')) %>% mutate(appleearly_applelate = .[,1]-.[,2]) %>% dplyr::select(.,appleearly_applelate)
       test<-cbind(test1,test2,test3) %>% as.matrix
       
        }
-    my_palette <- colorRampPalette(c("darkturquoise", "darkgoldenrod2"))(n = 1000)
-    library(pheatmap)
+ #   library(pheatmap)
     #?pheatmap
     pheatmap(test,col = my_palette,treeheight_row=0,treeheight_col=0)
     
@@ -331,18 +339,18 @@ server<-function(input,output) {
       strsql<-input$comparisons
       pop=input$population
       if ('AppleAverage & HawAverage' %in% strsql & 'HawEarly & HawLate' %in% strsql & !('AppleEarly & AppleLate' %in% strsql)){
-        out.snp<-final_table[!duplicated(final_table[,'snpId']),]
-        test1<-out.snp %>% select(.,matches('appleave_Maj|hawave_Maj'),loc,Urbana_apple_num_gene_TajD,Urbana_haw_num_gene_TajD,LDgr,MLE_AppleEarlyAppleLate_urbana,MLE_HawEarlyHawLate_urbana) %>% mutate(appleave_hawave = .[,1]-.[,2]) %>% select(.,appleave_hawave,loc,Urbana_apple_num_gene_TajD,Urbana_haw_num_gene_TajD,LDgr,MLE_AppleEarlyAppleLate_urbana,MLE_HawEarlyHawLate_urbana)
-        test2<-out.snp %>% select(.,matches('hawearly_Maj|hawlate_Maj')) %>% mutate(hawearly_hawlate = .[,1]-.[,2]) %>% select(.,hawearly_hawlate)
+        out.snp<-final_table[!duplicated(final_table[,'loc']),]
+        test1<-out.snp %>% dplyr::select(.,matches('appleave_Maj|hawave_Maj'),loc,Urbana_apple_num_gene_TajD,Urbana_haw_num_gene_TajD,LDgr,MLE_AppleEarlyAppleLate_urbana,MLE_HawEarlyHawLate_urbana) %>% mutate(appleave_hawave = .[,1]-.[,2]) %>% dplyr::select(.,appleave_hawave,loc,Urbana_apple_num_gene_TajD,Urbana_haw_num_gene_TajD,LDgr,MLE_AppleEarlyAppleLate_urbana,MLE_HawEarlyHawLate_urbana)
+        test2<-out.snp %>% dplyr::select(.,matches('hawearly_Maj|hawlate_Maj')) %>% mutate(hawearly_hawlate = .[,1]-.[,2]) %>% dplyr::select(.,hawearly_hawlate)
         test<-cbind(test1,test2) 
         test2<-test %>% mutate(signappleave_hawave=ifelse(appleave_hawave > 0,'Positive','Negative'))  %>% mutate(signhawearly_hawlate =ifelse(hawearly_hawlate > 0,'Positive','Negative'))
         sumtab<-test2 %>% group_by(signappleave_hawave,signhawearly_hawlate)  %>% summarise(loc_count=n_distinct(loc,na.rm = TRUE), Urbana_apple_num_gene_TajD_mean=mean(Urbana_apple_num_gene_TajD,na.rm = TRUE),Urbana_haw_num_gene_TajD_mean=mean(Urbana_haw_num_gene_TajD,na.rm = TRUE), MLE_AppleEarlyAppleLate_urbana_mean= mean(MLE_AppleEarlyAppleLate_urbana,na.rm = TRUE), MLE_HawEarlyHawLate_urbana_mean=mean(MLE_HawEarlyHawLate_urbana,na.rm = TRUE),LDgr_countHigh=sum(LDgr %in% c("H")),LDgr_countMed=sum(LDgr %in% c("M")),LDgr_countLow=sum(LDgr %in% c("L")))
       }
       else if ('AppleAverage & HawAverage' %in% strsql & 'AppleEarly & AppleLate' %in% strsql & !('HawEarly & HawLate' %in% strsql)){
         final_table<-mysqlcall()
-        out.snp<-final_table[!duplicated(final_table[,'snpId']),]
-        test1<-out.snp %>% select(.,matches('appleave_Maj|hawave_Maj'),loc,Urbana_apple_num_gene_TajD,Urbana_haw_num_gene_TajD,LDgr,MLE_AppleEarlyAppleLate_urbana,MLE_HawEarlyHawLate_urbana) %>% mutate(appleave_hawave = .[,1]-.[,2]) %>% select(.,appleave_hawave,loc,Urbana_apple_num_gene_TajD,Urbana_haw_num_gene_TajD,LDgr,MLE_AppleEarlyAppleLate_urbana,MLE_HawEarlyHawLate_urbana)
-        test2<-out.snp %>% select(.,matches('appleearly_Maj|applelate_Maj')) %>% mutate(appleearly_applelate = .[,1]-.[,2]) %>% select(.,appleearly_applelate)
+        out.snp<-final_table[!duplicated(final_table[,'loc']),]
+        test1<-out.snp %>% dplyr::select(.,matches('appleave_Maj|hawave_Maj'),loc,Urbana_apple_num_gene_TajD,Urbana_haw_num_gene_TajD,LDgr,MLE_AppleEarlyAppleLate_urbana,MLE_HawEarlyHawLate_urbana) %>% mutate(appleave_hawave = .[,1]-.[,2]) %>% dplyr::select(.,appleave_hawave,loc,Urbana_apple_num_gene_TajD,Urbana_haw_num_gene_TajD,LDgr,MLE_AppleEarlyAppleLate_urbana,MLE_HawEarlyHawLate_urbana)
+        test2<-out.snp %>% dplyr::select(.,matches('appleearly_Maj|applelate_Maj')) %>% mutate(appleearly_applelate = .[,1]-.[,2]) %>% dplyr::select(.,appleearly_applelate)
         test<-cbind(test1,test2) 
         test2<-test %>% mutate(signappleave_hawave=ifelse(appleave_hawave > 0,'Positive','Negative'))  %>% mutate(signappleearly_applelate =ifelse(appleearly_applelate > 0,'Positive','Negative'))
         sumtab<-test2 %>% group_by(signappleave_hawave,signappleearly_applelate)  %>% summarise(loc_count=n_distinct(loc,na.rm = TRUE), Urbana_apple_num_gene_TajD_mean=mean(Urbana_apple_num_gene_TajD,na.rm = TRUE),Urbana_haw_num_gene_TajD_mean=mean(Urbana_haw_num_gene_TajD,na.rm = TRUE),MLE_AppleEarlyAppleLate_urbana_mean= mean(MLE_AppleEarlyAppleLate_urbana,na.rm = TRUE),MLE_HawEarlyHawLate_urbana_mean=mean(MLE_HawEarlyHawLate_urbana,na.rm = TRUE),LDgr_countHigh=sum(LDgr %in% c("H")),LDgr_countMed=sum(LDgr %in% c("M")),LDgr_countLow=sum(LDgr %in% c("L")))
@@ -351,9 +359,9 @@ server<-function(input,output) {
       
       else if ('AppleEarly & AppleLate' %in% strsql & 'HawEarly & HawLate' %in% strsql & !('AppleAverage & HawAverage' %in% strsql)){
         final_table<-mysqlcall()
-        out.snp<-final_table[!duplicated(final_table[,'snpId']),]
-        test1<-out.snp %>% select(.,matches('appleearly_Maj|applelate_Maj'),loc,Urbana_apple_num_gene_TajD,Urbana_haw_num_gene_TajD,LDgr,MLE_AppleEarlyAppleLate_urbana,MLE_HawEarlyHawLate_urbana) %>% mutate(appleearly_applelate = .[,1]-.[,2]) %>% select(.,appleearly_applelate,loc,Urbana_apple_num_gene_TajD,Urbana_haw_num_gene_TajD,LDgr,MLE_AppleEarlyAppleLate_urbana,MLE_HawEarlyHawLate_urbana)
-        test2<-out.snp %>% select(.,matches('hawearly_Maj|hawlate_Maj')) %>% mutate(hawearly_hawlate = .[,1]-.[,2]) %>% select(.,hawearly_hawlate)
+        out.snp<-final_table[!duplicated(final_table[,'loc']),]
+        test1<-out.snp %>% dplyr::select(.,matches('appleearly_Maj|applelate_Maj'),loc,Urbana_apple_num_gene_TajD,Urbana_haw_num_gene_TajD,LDgr,MLE_AppleEarlyAppleLate_urbana,MLE_HawEarlyHawLate_urbana) %>% mutate(appleearly_applelate = .[,1]-.[,2]) %>% dplyr::select(.,appleearly_applelate,loc,Urbana_apple_num_gene_TajD,Urbana_haw_num_gene_TajD,LDgr,MLE_AppleEarlyAppleLate_urbana,MLE_HawEarlyHawLate_urbana)
+        test2<-out.snp %>% dplyr::select(.,matches('hawearly_Maj|hawlate_Maj')) %>% mutate(hawearly_hawlate = .[,1]-.[,2]) %>% dplyr::select(.,hawearly_hawlate)
         test<-cbind(test1,test2) 
         test2<-test %>% mutate(signappleearly_applelate=ifelse(appleearly_applelate > 0,'Positive','Negative'))  %>% mutate(signhawearly_hawlate =ifelse(hawearly_hawlate > 0,'Positive','Negative'))
         sumtab<-test2 %>% group_by(signappleearly_applelate,signhawearly_hawlate)  %>% summarise(loc_count=n_distinct(loc,na.rm = TRUE), Urbana_apple_num_gene_TajD_mean=mean(Urbana_apple_num_gene_TajD,na.rm = TRUE),Urbana_haw_num_gene_TajD_mean=mean(Urbana_haw_num_gene_TajD,na.rm = TRUE),MLE_AppleEarlyAppleLate_urbana_mean= mean(MLE_AppleEarlyAppleLate_urbana,na.rm = TRUE),MLE_HawEarlyHawLate_urbana_mean=mean(MLE_HawEarlyHawLate_urbana,na.rm = TRUE),LDgr_countHigh=sum(LDgr %in% c("H")),LDgr_countMed=sum(LDgr %in% c("M")),LDgr_countLow=sum(LDgr %in% c("L")))
@@ -362,10 +370,10 @@ server<-function(input,output) {
       
       else {
         final_table<-mysqlcall()
-        out.snp<-final_table[!duplicated(final_table[,'snpId']),]
-        test1<-out.snp %>% select(.,matches('appleave_Maj|hawave_Maj'),loc,Urbana_apple_num_gene_TajD,Urbana_haw_num_gene_TajD,LDgr,MLE_AppleEarlyAppleLate_urbana,MLE_HawEarlyHawLate_urbana) %>% mutate(appleave_hawave = .[,1]-.[,2]) %>% select(.,appleave_hawave,loc,Urbana_apple_num_gene_TajD,Urbana_haw_num_gene_TajD,LDgr,MLE_AppleEarlyAppleLate_urbana,MLE_HawEarlyHawLate_urbana)
-        test2<-out.snp %>% select(.,matches('hawearly_Maj|hawlate_Maj')) %>% mutate(hawearly_hawlate = .[,1]-.[,2]) %>% select(.,hawearly_hawlate)
-        test3<-out.snp %>% select(.,matches('appleearly_Maj|applelate_Maj')) %>% mutate(appleearly_applelate = .[,1]-.[,2]) %>% select(.,appleearly_applelate)
+        out.snp<-final_table[!duplicated(final_table[,'loc']),]
+        test1<-out.snp %>% dplyr::select(.,matches('appleave_Maj|hawave_Maj'),loc,Urbana_apple_num_gene_TajD,Urbana_haw_num_gene_TajD,LDgr,MLE_AppleEarlyAppleLate_urbana,MLE_HawEarlyHawLate_urbana) %>% mutate(appleave_hawave = .[,1]-.[,2]) %>% dplyr::select(.,appleave_hawave,loc,Urbana_apple_num_gene_TajD,Urbana_haw_num_gene_TajD,LDgr,MLE_AppleEarlyAppleLate_urbana,MLE_HawEarlyHawLate_urbana)
+        test2<-out.snp %>% dplyr::select(.,matches('hawearly_Maj|hawlate_Maj')) %>% mutate(hawearly_hawlate = .[,1]-.[,2]) %>% dplyr::select(.,hawearly_hawlate)
+        test3<-out.snp %>% dplyr::select(.,matches('appleearly_Maj|applelate_Maj')) %>% mutate(appleearly_applelate = .[,1]-.[,2]) %>% dplyr::select(.,appleearly_applelate)
         test<-cbind(test1,test2,test3) 
         test2<-test %>% mutate(signappleave_hawave=ifelse(appleave_hawave > 0,'Positive','Negative')) %>% mutate(signappleearly_applelate=ifelse(appleearly_applelate > 0,'Positive','Negative'))  %>% mutate(signhawearly_hawlate =ifelse(hawearly_hawlate > 0,'Positive','Negative')) 
         sumtab<-test2 %>% group_by(signappleave_hawave,signappleearly_applelate,signhawearly_hawlate)  %>% summarise(loc_count=n_distinct(loc,na.rm = TRUE), Urbana_apple_num_gene_TajD_mean=mean(Urbana_apple_num_gene_TajD,na.rm = TRUE),Urbana_haw_num_gene_TajD_mean=mean(Urbana_haw_num_gene_TajD,na.rm = TRUE),MLE_AppleEarlyAppleLate_urbana_mean= mean(MLE_AppleEarlyAppleLate_urbana,na.rm = TRUE),MLE_HawEarlyHawLate_urbana_mean=mean(MLE_HawEarlyHawLate_urbana,na.rm = TRUE),LDgr_countHigh=sum(LDgr %in% c("H")),LDgr_countMed=sum(LDgr %in% c("M")),LDgr_countLow=sum(LDgr %in% c("L")))
@@ -376,9 +384,125 @@ server<-function(input,output) {
     }
     tableout
      })
+  
+  FuncAnnotClust <- reactive({
+      if(input$sign=='Both'){
+        sql <- c( "SELECT testpoolmaf.snpId, testpoolmaf.scaffold, testpoolmaf.position, testpoolmaf.ref, testpoolmaf.alt, testpoolmaf.test_appleave_Maj, testpoolmaf.test_hawave_Maj, testpoolmaf.test_appleearly_Maj,testpoolmaf.test_applelate_Maj, testpoolmaf.test_hawearly_Maj, testpoolmaf.test_hawlate_Maj, snpFishertest.test_appleave_hawave_fisher_pvalue_adjust, snpFishertest.test_appleearly_applelate_fisher_pvalue_adjust, snpFishertest.test_hawearly_hawlate_fisher_pvalue_adjust, urbanapoolLDx.MLE_AppleEarlyAppleLate_urbana, urbanapoolLDx.MLE_HawEarlyHawLate_urbana, RAD_linkage_matchPool.LDgr, feature_alias.gene_id, annotation.loc, feature_alias.Flybase_gene_symbol, feature_alias.Flybase_FBgn, annotation.effect, urbanapoolTajDgene.Urbana_apple_num_gene_TajD, urbanapoolTajDgene.Urbana_haw_num_gene_TajD FROM testpoolmaf LEFT JOIN annotation ON testpoolmaf.snpId=annotation.snpId LEFT JOIN snpFishertest ON testpoolmaf.snpId=snpFishertest.snpId LEFT JOIN urbanapoolLDx ON testpoolmaf.snpId=urbanapoolLDx.snpId LEFT JOIN feature_alias ON annotation.loc=feature_alias.loc LEFT JOIN urbanapoolTajDgene ON feature_alias.gene_id=urbanapoolTajDgene.gene_id LEFT JOIN RAD_linkage_matchPool ON testpoolmaf.snpId=RAD_linkage_matchPool.snpId WHERE snpFishertest.test_appleave_hawave_fisher_pvalue_adjust < ", input$pvalue2, " AND snpFishertest.test_hawearly_hawlate_fisher_pvalue_adjust < ", input$pvalue2, " AND ABS (urbanapoolTajDgene.Urbana_apple_num_gene_TajD) > ", input$tajimaDApple, " AND ABS (urbanapoolTajDgene.Urbana_haw_num_gene_TajD) >", input$tajimaDHaw, ";")
+        sql<-gsub('test',"urbana",sql)
+        sql<-paste(sql,collapse='')
+        query2 <- dbGetQuery(con, sql)
+        final_table2<-query2 
+        #  final_table2<-mysqlcalltab2()
+ #     df6<-final_table2 %>% filter (., abs(Urbana_apple_num_gene_TajD) > input$tajimaD, abs(Urbana_haw_num_gene_TajD) > input$tajimaD) %>% distinct(.,loc,.keep_all = TRUE)
+ #     test1<-DAVIDWebService$new(email='eddy.dowle@otago.ac.nz',url="https://david.ncifcrf.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap12Endpoint/")
+#      FG <- addList(test1, final_table2$Flybase_FBgn, idType="FLYBASE_GENE_ID", listName="isClass", listType="Gene")
+#      FuncAnnotClust1 <- getClusterReport(test1)
+#      FuncAnnotClust1
+#      return(FuncAnnotClust1)
+    }
+    else if(input$sign=='positive'){
+    #  final_table2<-mysqlcalltab2()
+      sql <- c( "SELECT testpoolmaf.snpId, testpoolmaf.scaffold, testpoolmaf.position, testpoolmaf.ref, testpoolmaf.alt, testpoolmaf.test_appleave_Maj, testpoolmaf.test_hawave_Maj, testpoolmaf.test_appleearly_Maj,testpoolmaf.test_applelate_Maj, testpoolmaf.test_hawearly_Maj, testpoolmaf.test_hawlate_Maj, snpFishertest.test_appleave_hawave_fisher_pvalue_adjust, snpFishertest.test_appleearly_applelate_fisher_pvalue_adjust, snpFishertest.test_hawearly_hawlate_fisher_pvalue_adjust, urbanapoolLDx.MLE_AppleEarlyAppleLate_urbana, urbanapoolLDx.MLE_HawEarlyHawLate_urbana, RAD_linkage_matchPool.LDgr, feature_alias.gene_id, annotation.loc, feature_alias.Flybase_gene_symbol, feature_alias.Flybase_FBgn, annotation.effect, urbanapoolTajDgene.Urbana_apple_num_gene_TajD, urbanapoolTajDgene.Urbana_haw_num_gene_TajD FROM testpoolmaf LEFT JOIN annotation ON testpoolmaf.snpId=annotation.snpId LEFT JOIN snpFishertest ON testpoolmaf.snpId=snpFishertest.snpId LEFT JOIN urbanapoolLDx ON testpoolmaf.snpId=urbanapoolLDx.snpId LEFT JOIN feature_alias ON annotation.loc=feature_alias.loc LEFT JOIN urbanapoolTajDgene ON feature_alias.gene_id=urbanapoolTajDgene.gene_id LEFT JOIN RAD_linkage_matchPool ON testpoolmaf.snpId=RAD_linkage_matchPool.snpId WHERE snpFishertest.test_appleave_hawave_fisher_pvalue_adjust < ", input$pvalue2, " AND snpFishertest.test_hawearly_hawlate_fisher_pvalue_adjust < ", input$pvalue2, " AND urbanapoolTajDgene.Urbana_apple_num_gene_TajD > ", input$tajimaDApple, " AND urbanapoolTajDgene.Urbana_haw_num_gene_TajD >", input$tajimaDHaw, ";")
+      sql<-gsub('test',"urbana",sql)
+      sql<-paste(sql,collapse='')
+      query2 <- dbGetQuery(con, sql)
+      final_table2<-query2 #%>% distinct(.,loc,.keep_all = TRUE)
+  #   df6<-final_table2 %>% filter (., Urbana_apple_num_gene_TajD > input$tajimaD, Urbana_haw_num_gene_TajD > input$tajimaD)  %>% distinct(.,loc,.keep_all = TRUE)
+   #   test2<-DAVIDWebService$new(email='eddy.dowle@otago.ac.nz',url="https://david.ncifcrf.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap12Endpoint/")
+  #    FG <- addList(test2, final_table2$Flybase_FBgn, idType="FLYBASE_GENE_ID", listName="isClass", listType="Gene")
+  #    FuncAnnotClust1 <- getClusterReport(test2)
+      #     FuncAnnotClust1
+   #   return(FuncAnnotClust1)
+    }
+    else if(input$sign=='negative'){
+      sql <- c( "SELECT testpoolmaf.snpId, testpoolmaf.scaffold, testpoolmaf.position, testpoolmaf.ref, testpoolmaf.alt, testpoolmaf.test_appleave_Maj, testpoolmaf.test_hawave_Maj, testpoolmaf.test_appleearly_Maj,testpoolmaf.test_applelate_Maj, testpoolmaf.test_hawearly_Maj, testpoolmaf.test_hawlate_Maj, snpFishertest.test_appleave_hawave_fisher_pvalue_adjust, snpFishertest.test_appleearly_applelate_fisher_pvalue_adjust, snpFishertest.test_hawearly_hawlate_fisher_pvalue_adjust, urbanapoolLDx.MLE_AppleEarlyAppleLate_urbana, urbanapoolLDx.MLE_HawEarlyHawLate_urbana, RAD_linkage_matchPool.LDgr, feature_alias.gene_id, annotation.loc, feature_alias.Flybase_gene_symbol, feature_alias.Flybase_FBgn, annotation.effect, urbanapoolTajDgene.Urbana_apple_num_gene_TajD, urbanapoolTajDgene.Urbana_haw_num_gene_TajD FROM testpoolmaf LEFT JOIN annotation ON testpoolmaf.snpId=annotation.snpId LEFT JOIN snpFishertest ON testpoolmaf.snpId=snpFishertest.snpId LEFT JOIN urbanapoolLDx ON testpoolmaf.snpId=urbanapoolLDx.snpId LEFT JOIN feature_alias ON annotation.loc=feature_alias.loc LEFT JOIN urbanapoolTajDgene ON feature_alias.gene_id=urbanapoolTajDgene.gene_id LEFT JOIN RAD_linkage_matchPool ON testpoolmaf.snpId=RAD_linkage_matchPool.snpId WHERE snpFishertest.test_appleave_hawave_fisher_pvalue_adjust < ", input$pvalue2, " AND snpFishertest.test_hawearly_hawlate_fisher_pvalue_adjust < ", input$pvalue2, " AND urbanapoolTajDgene.Urbana_apple_num_gene_TajD < -", input$tajimaDApple, " AND urbanapoolTajDgene.Urbana_haw_num_gene_TajD < -", input$tajimaDHaw, ";")
+      sql<-gsub('test',"urbana",sql)
+      sql<-paste(sql,collapse='')
+      query2 <- dbGetQuery(con, sql)
+      final_table2<-query2 #%>% distinct(.,loc,.keep_all = TRUE)
+    }
+    
+    if (input$tabletype2=="David"){
+      final_table2<-final_table2 %>% distinct(.,loc,.keep_all = TRUE)
+#      df6<-final_table2 %>% filter (., Urbana_apple_num_gene_TajD < -input$tajimaD, Urbana_haw_num_gene_TajD < -input$tajimaD) %>% distinct(.,loc,.keep_all = TRUE)
+      test2<-DAVIDWebService$new(email='eddy.dowle@otago.ac.nz',url="https://david.ncifcrf.gov/webservice/services/DAVIDWebService.DAVIDWebServiceHttpSoap12Endpoint/")
+      FG <- addList(test2, final_table2$Flybase_FBgn, idType="FLYBASE_GENE_ID", listName="isClass", listType="Gene")
+      FuncAnnotClust1 <- getClusterReport(test2)
+      #     FuncAnnotClust1
+      return(FuncAnnotClust1)
+  }
+ else (
+   return(final_table2))
+  })
+  
+  output$gene_module_enrichment <- renderUI({
+    if (input$tabletype2=="David"){
+    FuncAnnotClust<-FuncAnnotClust()
+    choicesenrich=1:nrow(summary(FuncAnnotClust))
+    selectizeInput(inputId = "table_var2",
+                   label= "David Cluster (nonsense in raw table)",
+                   #                  choices=together.across %>% distinct(.,gene_id), 
+                   choices=choicesenrich,
+                   options=list(maxOptions=3000))
+    }
+    else {
+      selectizeInput(inputId = "table_var3",
+                     label= "Pathway",
+                     #                  choices=together.across %>% distinct(.,gene_id), 
+                     choices=c("All","insulin","wnt","tor"),
+                     selected='All')
+      }
+  })
+#  radioButtons('tabletype', label = "Raw or David Table",
+ #              choices = c ("David","Raw"),selected='David')),
+
+  output$David_table<-renderTable({
+    if(input$tabletype2=="David"){
+       clus<-as.integer(input$table_var2)
+      FuncAnnotClust<-FuncAnnotClust()
+      final_table<-members(FuncAnnotClust)[[clus]] %>% dplyr::select(-one_of("Genes"))
+    }
+    else if  (input$tabletype2=="Raw"){
+      final_table<-FuncAnnotClust()
+      if (input$table_var3=='All')
+      {
+        final_table<-final_table
+      }
+      else{
+        test<-input$table_var3
+        final_table<-final_table %>% filter(., Flybase_FBgn %in% get(test)$flyid)
+      }
+    }
+    else if  (input$tabletype2=="Summary Gene"){
+        final_table<-FuncAnnotClust()
+        if (input$table_var3=='All')
+        {
+        out.snp<-final_table[!duplicated(final_table[,'loc']),]
+        test1<-out.snp %>% dplyr::select(.,loc,Flybase_gene_symbol,snpId,Flybase_FBgn,Urbana_apple_num_gene_TajD,Urbana_haw_num_gene_TajD,LDgr,MLE_AppleEarlyAppleLate_urbana,MLE_HawEarlyHawLate_urbana) %>% group_by(loc,Flybase_gene_symbol,Flybase_FBgn)  %>% summarise(snp_count=n_distinct(snpId,na.rm = TRUE), Urbana_apple_num_gene_TajD_mean=mean(Urbana_apple_num_gene_TajD,na.rm = TRUE),Urbana_haw_num_gene_TajD_mean=mean(Urbana_haw_num_gene_TajD,na.rm = TRUE),MLE_AppleEarlyAppleLate_urbana_mean= mean(MLE_AppleEarlyAppleLate_urbana,na.rm = TRUE),MLE_HawEarlyHawLate_urbana_mean=mean(MLE_HawEarlyHawLate_urbana,na.rm = TRUE),LDgr_countHigh=sum(LDgr %in% c("H")),LDgr_countMed=sum(LDgr %in% c("M")),LDgr_countLow=sum(LDgr %in% c("L")))
+        final_table<-test1
+        }
+        else{
+          test<-input$table_var3
+          out.snp<-final_table %>% filter(., Flybase_FBgn %in% get(test)$flyid) %>% distinct(.,loc,Flybase_gene_symbol,Flybase_FBgn,.keep_all = TRUE)
+          test1<-out.snp %>% dplyr::select(.,loc,Flybase_gene_symbol,snpId,Flybase_FBgn,Urbana_apple_num_gene_TajD,Urbana_haw_num_gene_TajD,LDgr,MLE_AppleEarlyAppleLate_urbana,MLE_HawEarlyHawLate_urbana) %>% group_by(loc,Flybase_gene_symbol,Flybase_FBgn)  %>% summarise(snp_count=n_distinct(snpId,na.rm = TRUE), Urbana_apple_num_gene_TajD_mean=mean(Urbana_apple_num_gene_TajD,na.rm = TRUE),Urbana_haw_num_gene_TajD_mean=mean(Urbana_haw_num_gene_TajD,na.rm = TRUE),MLE_AppleEarlyAppleLate_urbana_mean= mean(MLE_AppleEarlyAppleLate_urbana,na.rm = TRUE),MLE_HawEarlyHawLate_urbana_mean=mean(MLE_HawEarlyHawLate_urbana,na.rm = TRUE),LDgr_countHigh=sum(LDgr %in% c("H")),LDgr_countMed=sum(LDgr %in% c("M")),LDgr_countLow=sum(LDgr %in% c("L")))
+          final_table<-test1
+          
+          }
+         }
+        # final_table
+    #  final_table<-head(together)
+    final_table
+  })
+  
+ 
+  
 }
 
 shinyApp(ui=ui,server=server)
+
+
+
+
 
 
 
@@ -434,7 +558,12 @@ LEFT JOIN feature_alias ON annotation.loc=feature_alias.loc LEFT JOIN urbanapool
 
  sql <- c( "SELECT testpoolmaf.snpId, testpoolmaf.test_appleave_Maj, testpoolmaf.test_hawave_Maj, testpoolmaf.test_appleearly_Maj,testpoolmaf.test_applelate_Maj, testpoolmaf.test_hawearly_Maj, testpoolmaf.test_hawlate_Maj, snpFishertest.test_appleave_hawave_fisher_pvalue_adjust, snpFishertest.test_appleearly_applelate_fisher_pvalue_adjust, snpFishertest.test_hawearly_hawlate_fisher_pvalue_adjust, urbanapoolLDx.MLE_AppleEarlyAppleLate_urbana, urbanapoolLDx.MLE_HawEarlyHawLate_urbana, RAD_linkage_matchPool.LDgr, feature_alias.gene_id, annotation.loc, annotation.effect, urbanapoolTajDgene.Urbana_apple_num_gene_TajD, urbanapoolTajDgene.Urbana_haw_num_gene_TajD FROM testpoolmaf LEFT JOIN annotation ON testpoolmaf.snpId=annotation.snpId LEFT JOIN snpFishertest ON testpoolmaf.snpId=snpFishertest.snpId LEFT JOIN urbanapoolLDx ON testpoolmaf.snpId=urbanapoolLDx.snpId LEFT JOIN feature_alias ON annotation.loc=feature_alias.loc LEFT JOIN urbanapoolTajDgene ON feature_alias.gene_id=urbanapoolTajDgene.gene_id LEFT JOIN RAD_linkage_matchPool ON testpoolmaf.snpId=RAD_linkage_matchPool.snpId WHERE snpFishertest.test_appleearly_applelate_fisher_pvalue_adjust < ", 0.05, " AND snpFishertest.test_hawearly_hawlate_fisher_pvalue_adjust < ", 0.05, " AND ABS(testpoolmaf.test_appleearly_Maj - testpoolmaf.test_applelate_Maj) > ", 0.5, " AND ABS (testpoolmaf.test_hawearly_Maj - testpoolmaf.test_hawlate_Maj) > ", 0.5, ";")
  
-
+ sql <- c( "SELECT testpoolmaf.snpId, testpoolmaf.scaffold, testpoolmaf.position, testpoolmaf.ref, testpoolmaf.alt, testpoolmaf.test_appleave_Maj, testpoolmaf.test_hawave_Maj, testpoolmaf.test_appleearly_Maj,testpoolmaf.test_applelate_Maj, testpoolmaf.test_hawearly_Maj, testpoolmaf.test_hawlate_Maj, snpFishertest.test_appleave_hawave_fisher_pvalue_adjust, snpFishertest.test_appleearly_applelate_fisher_pvalue_adjust, snpFishertest.test_hawearly_hawlate_fisher_pvalue_adjust, urbanapoolLDx.MLE_AppleEarlyAppleLate_urbana, urbanapoolLDx.MLE_HawEarlyHawLate_urbana, RAD_linkage_matchPool.LDgr, feature_alias.gene_id, annotation.loc, feature_alias.Flybase_gene_symbol, feature_alias.Flybase_FBgn, annotation.effect, urbanapoolTajDgene.Urbana_apple_num_gene_TajD, urbanapoolTajDgene.Urbana_haw_num_gene_TajD FROM testpoolmaf LEFT JOIN annotation ON testpoolmaf.snpId=annotation.snpId LEFT JOIN snpFishertest ON testpoolmaf.snpId=snpFishertest.snpId LEFT JOIN urbanapoolLDx ON testpoolmaf.snpId=urbanapoolLDx.snpId LEFT JOIN feature_alias ON annotation.loc=feature_alias.loc LEFT JOIN urbanapoolTajDgene ON feature_alias.gene_id=urbanapoolTajDgene.gene_id LEFT JOIN RAD_linkage_matchPool ON testpoolmaf.snpId=RAD_linkage_matchPool.snpId WHERE snpFishertest.test_appleave_hawave_fisher_pvalue_adjust < ", 0.05, " AND snpFishertest.test_hawearly_hawlate_fisher_pvalue_adjust < ", 0.05, " AND ABS(testpoolmaf.test_appleave_Maj - testpoolmaf.test_hawave_Maj) > ", 0.5, " AND ABS (testpoolmaf.test_hawearly_Maj - testpoolmaf.test_hawlate_Maj) > ", 0.5, ";")
+ sql<-gsub('test','urbana',sql)
+ sql<-paste(sql,collapse='')
+ query <- dbGetQuery(con, sql)
+ final_table<-query
+ 
 sql<-gsub('test','urbana',sql)
 
 strsql<-paste(sql,collapse='')
