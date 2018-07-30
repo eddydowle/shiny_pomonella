@@ -169,7 +169,7 @@ ui<-fluidPage(
                         column(4,offset=1,
                                checkboxGroupButtons('comparisons', label='MAF comparisons',
                                             choices=c('AppleAverage & HawAverage','AppleEarly & AppleLate','HawEarly & HawLate'),
-                                            selected=c('AppleEarly & AppleLate', 'HawEarly & HawLate')), #AppleAverage & HawAverage','HawEarly & HawLate'
+                                            selected=c('AppleAverage & HawAverage','HawEarly & HawLate')), #AppleAverage & HawAverage','HawEarly & HawLate'AppleEarly & AppleLate', 'HawEarly & HawLate'
                                sliderInput("pvalue", "Adjusted pvalue (is true for populations in comparisons):",
                                            min = 0, max = 1,
                                            value = 0.05)),
@@ -181,7 +181,7 @@ ui<-fluidPage(
                              choices = c("Gene Summary","Raw SNPs"),selected='Raw SNPs')))),
   conditionalPanel(condition="input.conditionedPanels==2",
                    fluidRow(column(3,
-                                   radioButtons('population2', label = 'Population choice for SNP',
+                                   radioButtons('population2', label = 'Population choice for SNP (only urbana works)',
                                                 choices = c("urbana","grant"),selected='urbana'),
                                    sliderInput("tajimaDApple", "Absolute TajimaD values Apple:",
                                                min = 0, max = 10,
@@ -192,7 +192,7 @@ ui<-fluidPage(
                    column(4, offset=1,
                                    radioButtons('sign', label = 'Sign of TajimaD values',
                                                 choices = c("Both","positive","negative"),selected='Both'),
-                                   radioButtons('tabletype2', label = "Raw or David Table",
+                                   radioButtons('tabletype2', label = "Summary, Raw or David Table",
                                                 choices = c ("David","Raw","Summary Gene"),selected='David')),
                              #      uiOutput(outputId = "gene2")),
                             column(4,
@@ -440,7 +440,7 @@ server<-function(input,output) {
     FuncAnnotClust<-FuncAnnotClust()
     choicesenrich=1:nrow(summary(FuncAnnotClust))
     selectizeInput(inputId = "table_var2",
-                   label= "David Cluster (nonsense in raw table)",
+                   label= "David Cluster (switch to raw/summary for pathways)",
                    #                  choices=together.across %>% distinct(.,gene_id), 
                    choices=choicesenrich,
                    options=list(maxOptions=3000))
