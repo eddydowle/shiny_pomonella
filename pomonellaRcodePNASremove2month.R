@@ -1,10 +1,8 @@
-#Eddy October 2016
+#Eddy October 2016-may2020
 
 #base code for main tables removing 2 months to remove any diapause initiation impact
 #some of the table names still have 2M in them but 2M is removed from analysis
-#source("https://bioconductor.org/biocLite.R")
-#biocLite("edgeR")
-#biocLite("locfit")
+
 
 library(edgeR)
 library(stringr)
